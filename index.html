@@ -455,7 +455,7 @@
       }
     }
 
-    // --- SEZIONE GRUPPI ---
+    // --- SEZIONE GRUPPI (CON PULSANTI AZIONE VISIBILI E CORRETTI) ---
     async function renderGruppi(container) {
       const gruppi = await db.gruppi.toArray();
 
@@ -473,17 +473,22 @@
             ${await Promise.all(gruppi.map(async g => {
               const count = await db.persone_gruppi.where('gruppo_id').equals(g.id).count();
               return `
-                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center gap-2">
                   <div class="cursor-pointer min-w-0 flex-1" onclick="navigate('dettaglio-gruppo', ${g.id})">
-                    <h3 class="font-bold text-xs text-slate-800 truncate">${escapeHtml(g.nome)}</h3>
-                    <p class="text-[10px] text-slate-400">${count} persone associate</p>
+                    <h3 class="font-bold text-sm text-slate-800 truncate">${escapeHtml(g.nome)}</h3>
+                    <p class="text-[11px] text-slate-400 font-medium">${count} persone associate</p>
                   </div>
-                  <div class="flex gap-1">
-                    <button onclick="openModalNuovoGruppo(${g.id})" class="p-1.5 text-slate-400 hover:text-slate-600">
-                      <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                  <!-- PULSANTI MODIFICA ED ELIMINAZIONE -->
+                  <div class="flex items-center gap-1 flex-shrink-0">
+                    <button onclick="event.stopPropagation(); openModalNuovoGruppo(${g.id})" 
+                      title="Rinomina Gruppo" 
+                      class="p-2 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg border border-purple-200 flex items-center justify-center transition active:scale-95">
+                      <i data-lucide="edit-2" class="w-4 h-4"></i>
                     </button>
-                    <button onclick="deleteGruppo(${g.id})" class="p-1.5 text-rose-400 hover:text-rose-600">
-                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    <button onclick="event.stopPropagation(); deleteGruppo(${g.id})" 
+                      title="Elimina Gruppo" 
+                      class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg border border-rose-200 flex items-center justify-center transition active:scale-95">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
                   </div>
                 </div>
@@ -557,7 +562,7 @@
             ${persone.map(p => `
               <div onclick="navigate('scheda-persona', ${p.id})" class="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center gap-3 cursor-pointer">
                 <img src="${p.foto || defaultAvatar()}" class="w-8 h-8 rounded-full object-cover border">
-                <p class="font-bold text-xs text-slate-800 truncate">${escapeHtml(p.cognome)}${escapeHtml(p.nome)}</p>
+                <p class="font-bold text-xs text-slate-800 truncate">${escapeHtml(p.cognome)} ${escapeHtml(p.nome)}</p>
               </div>
             `).join('')}
           </div>
@@ -937,7 +942,7 @@
       renderSchedaPersona(document.getElementById('main-content'), personaId);
     }
 
-    // --- IMPOSTAZIONI, BACKUP, IMPORT/EXPORT EXCEL ROBUSTO ---
+    // --- IMPOSTAZIONI, BACKUP, IMPORT/EXPORT EXCEL ROBUSTO CON FOTO ---
     function renderImpostazioni(container) {
       container.innerHTML = `
         <div class="space-y-4">
@@ -947,10 +952,10 @@
           <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
             <h3 class="text-xs font-bold text-slate-700 uppercase">Esporta Anagrafica in Excel</h3>
             <p class="text-[11px] text-slate-500">
-              Scarica un file Excel (<code>.xlsx</code>) completo con tutte le persone salvate ed i relativi gruppi.
+              Scarica un file Excel (<code>.xlsx</code>) completo con tutte le persone, i gruppi associati e la colonna <strong>Foto</strong> (incluso il formato Base64/DataURL).
             </p>
             <button onclick="exportAllPeopleToExcel()" class="w-full p-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow active:bg-emerald-700">
-              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Scarica Anagrafica Excel (.xlsx)
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Scarica Anagrafica Excel con Foto (.xlsx)
             </button>
           </div>
 
@@ -959,7 +964,7 @@
             <h3 class="text-xs font-bold text-slate-700 uppercase">Importa Persone da Excel / CSV</h3>
             <p class="text-[11px] text-slate-500">
               Carica un file Excel (<code>.xlsx</code>, <code>.xls</code>) o CSV con colonne:<br>
-              <code class="bg-slate-100 p-1 rounded font-mono text-[10px] block mt-1">Cognome | Nome | Data di Nascita | Luogo di Nascita | Gruppi</code>
+              <code class="bg-slate-100 p-1 rounded font-mono text-[10px] block mt-1">Cognome | Nome | Data di Nascita | Luogo di Nascita | Gruppi | Foto</code>
             </p>
             
             <label class="w-full p-2.5 bg-emerald-50 text-emerald-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-emerald-200 cursor-pointer">
@@ -984,7 +989,7 @@
       `;
     }
 
-    // --- ESPORTAZIONE EXCEL CON COLONNE ADATTATE ---
+    // --- ESPORTAZIONE EXCEL CON COLONNA FOTO COMPATIBILE ---
     async function exportAllPeopleToExcel() {
       const persone = await db.persone.toArray();
       if (persone.length === 0) {
@@ -1012,6 +1017,7 @@
         'Data di Nascita': formatDate(p.data_nascita),
         'Luogo di Nascita': p.luogo_nascita || '',
         'Gruppi': (mapPersonaGruppi[p.id] || []).join(', '),
+        'Foto': p.foto || '', // Inserisce la stringa DataURL base64 o URL foto
         'Data Inserimento': formatDate(p.data_inserimento)
       }));
 
@@ -1027,13 +1033,16 @@
 
     function autoFitColumns(worksheet, jsonRows) {
       if (!jsonRows || jsonRows.length === 0) return;
-      const colWidths = Object.keys(jsonRows[0]).map(key => ({
-        wch: Math.max(key.length, ...jsonRows.map(r => String(r[key] || '').length)) + 3
-      }));
+      const colWidths = Object.keys(jsonRows[0]).map(key => {
+        if (key === 'Foto') return { wch: 25 }; // Larghezza fissa per colonna Foto
+        return {
+          wch: Math.max(key.length, ...jsonRows.map(r => String(r[key] || '').length)) + 3
+        };
+      });
       worksheet['!cols'] = colWidths;
     }
 
-    // --- IMPORTAZIONE EXCEL/CSV CON RICONOSCIMENTO RIGOROSO COLONNE E GESTIONE GRUPPI ---
+    // --- IMPORTAZIONE EXCEL/CSV CON RICONOSCIMENTO FOTO E GRUPPI ---
     async function importExcelPeople(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1056,7 +1065,6 @@
           let imported = 0;
           let skipped = 0;
 
-          // Mappa gruppi esistenti per nome miniuscolo -> id
           const existingGroups = await db.gruppi.toArray();
           const mapGroupsByName = {};
           existingGroups.forEach(g => mapGroupsByName[g.nome.toLowerCase().trim()] = g.id);
@@ -1064,22 +1072,23 @@
           for (const row of rawRows) {
             const keys = Object.keys(row);
             
-            // RICONOSCIMENTO RIGOROSO DELLE COLONNE
+            // RICONOSCIMENTO RIGOROSO COLONNE INCLUSO "FOTO"
             const cognomeKey = keys.find(k => /^cognome$/i.test(k.trim()) || /cognome/i.test(k.trim()));
             const nomeKey = keys.find(k => /^nome$/i.test(k.trim()) || (/nome/i.test(k.trim()) && !/cognome/i.test(k.trim())));
             const dataKey = keys.find(k => /data/i.test(k.trim()) || /nascita/i.test(k.trim()));
             const luogoKey = keys.find(k => /luogo/i.test(k.trim()) || /città/i.test(k.trim()) || /comune/i.test(k.trim()));
             const gruppiKey = keys.find(k => /grupp/i.test(k.trim()));
+            const fotoKey = keys.find(k => /foto/i.test(k.trim()) || /immagine/i.test(k.trim()) || /photo/i.test(k.trim()) || /image/i.test(k.trim()));
 
             const cognome = String(row[cognomeKey] || '').trim();
             const nome = String(row[nomeKey] || '').trim();
             let data_nascita = row[dataKey];
             const luogo_nascita = String(row[luogoKey] || '').trim();
             const gruppiStr = String(row[gruppiKey] || '').trim();
+            const fotoVal = String(row[fotoKey] || '').trim();
 
-            if (!nome || !cognome) continue; // Salta righe non valide
+            if (!nome || !cognome) continue;
 
-            // Normalizza formato data
             if (data_nascita instanceof Date) {
               data_nascita = data_nascita.toISOString().split('T')[0];
             } else {
@@ -1095,16 +1104,20 @@
                 cognome,
                 data_nascita,
                 luogo_nascita,
-                foto: '',
+                foto: fotoVal, // Salva la foto (URL o DataURL Base64 da Excel)
                 data_inserimento: new Date().toISOString()
               });
               imported++;
             } else {
               personaId = dup.id;
+              // Se la persona esiste ma non aveva foto, e nel file excel è presente, aggiorna la foto
+              if (!dup.foto && fotoVal) {
+                await db.persone.update(dup.id, { foto: fotoVal });
+              }
               skipped++;
             }
 
-            // GESTIONE E ASSOCIAZIONE GRUPPI DA EXCEL
+            // ASSOCIAZIONE GRUPPI
             if (gruppiStr && personaId) {
               const namesList = gruppiStr.split(/[,;-]/).map(s => s.trim()).filter(s => s.length > 0);
               
@@ -1112,13 +1125,11 @@
                 const gLower = gName.toLowerCase();
                 let gId = mapGroupsByName[gLower];
 
-                // Se il gruppo non esiste nell'app, lo crea al volo
                 if (!gId) {
                   gId = await db.gruppi.add({ nome: gName });
                   mapGroupsByName[gLower] = gId;
                 }
 
-                // Associa la persona al gruppo se non già associata
                 const assocDup = await db.persone_gruppi.where({ persona_id: personaId, gruppo_id: gId }).first();
                 if (!assocDup) {
                   await db.persone_gruppi.add({ persona_id: personaId, gruppo_id: gId });
@@ -1127,7 +1138,7 @@
             }
           }
 
-          alert(`Importazione completata con successo!\n\n• Nuovi nominativi inseriti: ${imported}\n• Nominativi già esistenti (o aggiornati gruppi): ${skipped}`);
+          alert(`Importazione completata con successo!\n\n• Nuovi nominativi inseriti: ${imported}\n• Nominativi aggiornati/duplicati saltati: ${skipped}`);
           navigate('persone');
 
         } catch (err) {
