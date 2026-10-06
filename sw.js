@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eventi-db-v4';
+const CACHE_NAME = 'eventi-db-v5';
 const ASSETS = [
   './',
   './index.html',

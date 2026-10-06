@@ -959,7 +959,7 @@
             <h3 class="text-xs font-bold text-slate-700 uppercase">Importa Persone da Excel / CSV</h3>
             <p class="text-[11px] text-slate-500">
               Carica un file Excel (<code>.xlsx</code>, <code>.xls</code>) o CSV con colonne:<br>
-              <code class="bg-slate-100 p-1 rounded font-mono text-[10px] block mt-1">Cognome | Nome | Data di Nascita | Luogo di Nascita</code>
+              <code class="bg-slate-100 p-1 rounded font-mono text-[10px] block mt-1">Cognome | Nome | Data di Nascita | Luogo di Nascita | Gruppi</code>
             </p>
             
             <label class="w-full p-2.5 bg-emerald-50 text-emerald-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-emerald-200 cursor-pointer">
@@ -984,7 +984,7 @@
       `;
     }
 
-    // --- NUOVA ESPORTAZIONE EXCEL CON AUTO-FIT COLONNE ---
+    // --- ESPORTAZIONE EXCEL CON COLONNE ADATTATE ---
     async function exportAllPeopleToExcel() {
       const persone = await db.persone.toArray();
       if (persone.length === 0) {
@@ -1025,7 +1025,6 @@
       XLSX.writeFile(workbook, `Anagrafica_Persone_${today}.xlsx`);
     }
 
-    // Helper: adatta la larghezza delle colonne al testo contenuto
     function autoFitColumns(worksheet, jsonRows) {
       if (!jsonRows || jsonRows.length === 0) return;
       const colWidths = Object.keys(jsonRows[0]).map(key => ({
@@ -1034,7 +1033,7 @@
       worksheet['!cols'] = colWidths;
     }
 
-    // --- NUOVO IMPORTATORE INTELLIGENTE PER FILE EXCEL / CSV ---
+    // --- IMPORTAZIONE EXCEL/CSV CON RICONOSCIMENTO RIGOROSO COLONNE E GESTIONE GRUPPI ---
     async function importExcelPeople(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1047,7 +1046,6 @@
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
           
-          // Converte il foglio Excel in array di oggetti JSON
           const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
           if (rawRows.length === 0) {
@@ -1058,21 +1056,28 @@
           let imported = 0;
           let skipped = 0;
 
+          // Mappa gruppi esistenti per nome miniuscolo -> id
+          const existingGroups = await db.gruppi.toArray();
+          const mapGroupsByName = {};
+          existingGroups.forEach(g => mapGroupsByName[g.nome.toLowerCase().trim()] = g.id);
+
           for (const row of rawRows) {
-            // Mappatura dinamica delle colonne: cerca nomi plausibili per le intestazioni
             const keys = Object.keys(row);
             
-            const cognomeKey = keys.find(k => k.toLowerCase().includes('cognome')) || keys[0];
-            const nomeKey = keys.find(k => k.toLowerCase().includes('nome')) || keys[1];
-            const dataKey = keys.find(k => k.toLowerCase().includes('data') || k.toLowerCase().includes('nascita')) || keys[2];
-            const luogoKey = keys.find(k => k.toLowerCase().includes('luogo') || k.toLowerCase().includes('città') || k.toLowerCase().includes('comune')) || keys[3];
+            // RICONOSCIMENTO RIGOROSO DELLE COLONNE
+            const cognomeKey = keys.find(k => /^cognome$/i.test(k.trim()) || /cognome/i.test(k.trim()));
+            const nomeKey = keys.find(k => /^nome$/i.test(k.trim()) || (/nome/i.test(k.trim()) && !/cognome/i.test(k.trim())));
+            const dataKey = keys.find(k => /data/i.test(k.trim()) || /nascita/i.test(k.trim()));
+            const luogoKey = keys.find(k => /luogo/i.test(k.trim()) || /città/i.test(k.trim()) || /comune/i.test(k.trim()));
+            const gruppiKey = keys.find(k => /grupp/i.test(k.trim()));
 
             const cognome = String(row[cognomeKey] || '').trim();
             const nome = String(row[nomeKey] || '').trim();
             let data_nascita = row[dataKey];
             const luogo_nascita = String(row[luogoKey] || '').trim();
+            const gruppiStr = String(row[gruppiKey] || '').trim();
 
-            if (!nome || !cognome) continue; // Salta righe incomplete
+            if (!nome || !cognome) continue; // Salta righe non valide
 
             // Normalizza formato data
             if (data_nascita instanceof Date) {
@@ -1081,10 +1086,11 @@
               data_nascita = parseItalianDate(String(data_nascita));
             }
 
-            // Controllo duplicati
+            let personaId;
             const dup = await db.persone.where({ nome, cognome }).first();
+
             if (!dup) {
-              await db.persone.add({
+              personaId = await db.persone.add({
                 nome,
                 cognome,
                 data_nascita,
@@ -1094,11 +1100,34 @@
               });
               imported++;
             } else {
+              personaId = dup.id;
               skipped++;
+            }
+
+            // GESTIONE E ASSOCIAZIONE GRUPPI DA EXCEL
+            if (gruppiStr && personaId) {
+              const namesList = gruppiStr.split(/[,;-]/).map(s => s.trim()).filter(s => s.length > 0);
+              
+              for (const gName of namesList) {
+                const gLower = gName.toLowerCase();
+                let gId = mapGroupsByName[gLower];
+
+                // Se il gruppo non esiste nell'app, lo crea al volo
+                if (!gId) {
+                  gId = await db.gruppi.add({ nome: gName });
+                  mapGroupsByName[gLower] = gId;
+                }
+
+                // Associa la persona al gruppo se non già associata
+                const assocDup = await db.persone_gruppi.where({ persona_id: personaId, gruppo_id: gId }).first();
+                if (!assocDup) {
+                  await db.persone_gruppi.add({ persona_id: personaId, gruppo_id: gId });
+                }
+              }
             }
           }
 
-          alert(`Importazione completata con successo!\n\n• Nuovi nominativi inseriti: ${imported}\n• Duplicati saltati: ${skipped}`);
+          alert(`Importazione completata con successo!\n\n• Nuovi nominativi inseriti: ${imported}\n• Nominativi già esistenti (o aggiornati gruppi): ${skipped}`);
           navigate('persone');
 
         } catch (err) {
@@ -1109,11 +1138,10 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // Helper: converte stringhe data italiane (GG/MM/AAAA) nel formato standard AAAA-MM-GG
     function parseItalianDate(dateStr) {
       if (!dateStr) return '';
       dateStr = dateStr.trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr; // Già ISO
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
       const parts = dateStr.split(/[\/\.-]/);
       if (parts.length === 3) {
         const day = parts[0].padStart(2, '0');
