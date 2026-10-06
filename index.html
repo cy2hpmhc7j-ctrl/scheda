@@ -21,6 +21,8 @@
   <!-- jsPDF & AutoTable -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
+  <!-- SheetJS per Esportazione Excel Nativa (.xlsx) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Lucide Icons -->
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
 
@@ -75,7 +77,7 @@
   <div id="modal-container"></div>
 
   <script>
-    // --- DB SCHEMA WITH GROUPS ---
+    // --- DB SCHEMA ---
     const db = new Dexie('AnagraficaEventiDB');
     db.version(2).stores({
       persone: '++id, nome, cognome, data_nascita, luogo_nascita, data_inserimento',
@@ -836,7 +838,7 @@
       filterPresenze(listaId);
     }
 
-    // Modal Esportazione
+    // Modal Esportazione Evento
     function openExportModal(listaId) {
       document.getElementById('modal-container').innerHTML = `
         <div class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
@@ -849,7 +851,7 @@
             </select>
             <div class="grid grid-cols-2 gap-2 pt-1">
               <button onclick="exportData(${listaId}, 'pdf')" class="p-2 bg-rose-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1"><i data-lucide="file-text" class="w-4 h-4"></i> PDF</button>
-              <button onclick="exportData(${listaId}, 'csv')" class="p-2 bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1"><i data-lucide="sheet" class="w-4 h-4"></i> Excel/CSV</button>
+              <button onclick="exportData(${listaId}, 'excel')" class="p-2 bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1"><i data-lucide="sheet" class="w-4 h-4"></i> Excel (.xlsx)</button>
             </div>
             <button onclick="closeModal()" class="w-full p-1.5 text-slate-400 text-xs font-semibold">Annulla</button>
           </div>
@@ -872,13 +874,20 @@
       if (filter === 'assenti') data = data.filter(d => !d.presente);
       data.sort((a,b) => a.cognome.localeCompare(b.cognome));
 
-      if (format === 'csv') {
-        let csv = "data:text/csv;charset=utf-8,N,Cognome,Nome,Data Nascita,Luogo Nascita,Presenza\n";
-        data.forEach((d, i) => { csv += `${i+1},"${d.cognome}","${d.nome}","${d.data_nascita||''}","${d.luogo_nascita||''}","${d.presente?'PRESENTE':'ASSENTE'}"\n`; });
-        const a = document.createElement("a");
-        a.href = encodeURI(csv);
-        a.download = `${lista.nome}_export.csv`;
-        a.click();
+      if (format === 'excel') {
+        const rows = data.map((d, i) => ({
+          'N.': i + 1,
+          'Cognome': d.cognome,
+          'Nome': d.nome,
+          'Data Nascita': formatDate(d.data_nascita),
+          'Luogo Nascita': d.luogo_nascita || '',
+          'Stato Presenza': d.presente ? 'PRESENTE' : 'ASSENTE'
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Partecipanti");
+        XLSX.writeFile(workbook, `${lista.nome}_esportazione.xlsx`);
       } else {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
@@ -927,40 +936,90 @@
       renderSchedaPersona(document.getElementById('main-content'), personaId);
     }
 
-    // --- IMPOSTAZIONI, BACKUP & IMPORTAZIONE CSV ---
+    // --- IMPOSTAZIONI, BACKUP, IMPORT/EXPORT EXCEL ---
     function renderImpostazioni(container) {
       container.innerHTML = `
         <div class="space-y-4">
-          <h2 class="font-bold text-base text-slate-800">Impostazioni & Backup</h2>
-          
-          <!-- BACKUP COMPLETO -->
+          <h2 class="font-bold text-base text-slate-800">Impostazioni & Dati</h2>
+
+          <!-- ESPORTA INTERA ANAGRAFICA IN EXCEL -->
           <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-            <h3 class="text-xs font-bold text-slate-700 uppercase">Backup Completo Dati</h3>
-            <p class="text-[11px] text-slate-500">Esporta o ripristina l'intero database (persone, foto, gruppi, eventi e presenze).</p>
-            <button onclick="exportBackup()" class="w-full p-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2">
-              <i data-lucide="download-cloud" class="w-4 h-4"></i> Esporta Backup (JSON)
+            <h3 class="text-xs font-bold text-slate-700 uppercase">Esporta Anagrafica in Excel</h3>
+            <p class="text-[11px] text-slate-500">
+              Scarica un file Excel (<code>.xlsx</code>) completo con tutte le persone salvate nel database ed i relativi gruppi associati.
+            </p>
+            <button onclick="exportAllPeopleToExcel()" class="w-full p-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow active:bg-emerald-700">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Scarica Anagrafica Excel (.xlsx)
             </button>
-            <label class="w-full p-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border cursor-pointer">
-              <i data-lucide="upload-cloud" class="w-4 h-4"></i> Ripristina Backup (JSON)
-              <input type="file" accept=".json" onchange="importBackup(event)" class="hidden">
-            </label>
           </div>
 
-          <!-- IMPORTAZIONE MASSIVA PERSONE DA CSV -->
+          <!-- IMPORTAZIONE MASSIVA PERSONE DA CSV / EXCEL -->
           <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-            <h3 class="text-xs font-bold text-slate-700 uppercase">Importa Persone da Excel / CSV</h3>
+            <h3 class="text-xs font-bold text-slate-700 uppercase">Importa Persone da CSV</h3>
             <p class="text-[11px] text-slate-500">
               Carica un file CSV formattato con le colonne:<br>
               <code class="bg-slate-100 p-1 rounded font-mono text-[10px] block mt-1">Cognome, Nome, DataNascita (YYYY-MM-DD), LuogoNascita</code>
             </p>
             
             <label class="w-full p-2.5 bg-emerald-50 text-emerald-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-emerald-200 cursor-pointer">
-              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Seleziona File CSV Persone
+              <i data-lucide="upload" class="w-4 h-4"></i> Seleziona File CSV
               <input type="file" accept=".csv" onchange="importCSVPeople(event)" class="hidden">
+            </label>
+          </div>
+          
+          <!-- BACKUP COMPLETO DATABASE -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+            <h3 class="text-xs font-bold text-slate-700 uppercase">Backup / Ripristino Completo</h3>
+            <p class="text-[11px] text-slate-500">Esporta o ripristina l'intero database comprensivo di fotografie in formato JSON.</p>
+            <button onclick="exportBackup()" class="w-full p-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2">
+              <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup Completo (JSON)
+            </button>
+            <label class="w-full p-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border cursor-pointer">
+              <i data-lucide="upload-cloud" class="w-4 h-4"></i> Ripristina Backup (JSON)
+              <input type="file" accept=".json" onchange="importBackup(event)" class="hidden">
             </label>
           </div>
         </div>
       `;
+    }
+
+    // NUOVA FUNZIONE: ESPORTA TUTTE LE PERSONE IN EXCEL NATIVO (.xlsx)
+    async function exportAllPeopleToExcel() {
+      const persone = await db.persone.toArray();
+      if (persone.length === 0) {
+        alert('Nessuna persona presente nel database da esportare.');
+        return;
+      }
+
+      persone.sort((a, b) => a.cognome.localeCompare(b.cognome));
+
+      const allGruppi = await db.gruppi.toArray();
+      const mapGruppi = {};
+      allGruppi.forEach(g => mapGruppi[g.id] = g.nome);
+
+      const allAssocG = await db.persone_gruppi.toArray();
+      const mapPersonaGruppi = {};
+      allAssocG.forEach(a => {
+        if (!mapPersonaGruppi[a.persona_id]) mapPersonaGruppi[a.persona_id] = [];
+        if (mapGruppi[a.gruppo_id]) mapPersonaGruppi[a.persona_id].push(mapGruppi[a.gruppo_id]);
+      });
+
+      const rows = persone.map((p, index) => ({
+        'N.': index + 1,
+        'Cognome': p.cognome,
+        'Nome': p.nome,
+        'Data di Nascita': formatDate(p.data_nascita),
+        'Luogo di Nascita': p.luogo_nascita || '',
+        'Gruppi': (mapPersonaGruppi[p.id] || []).join(', '),
+        'Data Inserimento': formatDate(p.data_inserimento)
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Anagrafica Persone");
+
+      const today = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(workbook, `Anagrafica_Persone_${today}.xlsx`);
     }
 
     async function exportBackup() {
@@ -1002,7 +1061,6 @@
       reader.readAsText(file);
     }
 
-    // FUNZIONE IMPORTAZIONE MASSIVA DA CSV
     async function importCSVPeople(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1018,7 +1076,6 @@
           const line = lines[i].trim();
           if (!line) continue;
 
-          // Se la prima riga contiene l'intestazione, la salta
           if (i === 0 && (line.toLowerCase().includes('cognome') || line.toLowerCase().includes('nome'))) {
             continue;
           }
@@ -1031,7 +1088,6 @@
 
           if (!nome || !cognome) continue;
 
-          // Controllo duplicati basato su Nome e Cognome
           const dup = await db.persone.where({ nome, cognome }).first();
           if (!dup) {
             await db.persone.add({
