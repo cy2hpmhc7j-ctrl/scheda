@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eventi-db-v3';
+const CACHE_NAME = 'eventi-db-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,6 @@ const ASSETS = [
   'https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js'
 ];
 
-// Installazione Service Worker e salvataggio in Cache degli asset
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
@@ -17,7 +16,6 @@ self.addEventListener('install', (e) => {
   self.skipWaiting();
 });
 
-// Pulizia delle vecchie versioni della cache
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
@@ -29,7 +27,6 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// Gestione delle richieste di rete / risposta da cache
 self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(e.request).then((res) => res || fetch(e.request))

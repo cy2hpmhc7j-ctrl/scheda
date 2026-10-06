@@ -21,7 +21,7 @@
   <!-- jsPDF & AutoTable -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
-  <!-- SheetJS per Esportazione Excel Nativa (.xlsx) -->
+  <!-- SheetJS per Import/Export Excel Nativo (.xlsx, .xls, .csv) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Lucide Icons -->
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
@@ -165,7 +165,7 @@
                 <div onclick="navigate('scheda-persona', ${p.id})" class="py-2 flex items-center gap-3 cursor-pointer">
                   <img src="${p.foto || defaultAvatar()}" class="w-9 h-9 rounded-full object-cover border">
                   <div class="min-w-0 flex-1">
-                    <p class="font-semibold text-xs text-slate-800 truncate">${escapeHtml(p.cognome)}${escapeHtml(p.nome)}</p>
+                    <p class="font-semibold text-xs text-slate-800 truncate">${escapeHtml(p.cognome)} ${escapeHtml(p.nome)}</p>
                     <p class="text-[10px] text-slate-400">${escapeHtml(p.luogo_nascita || 'N.D.')}</p>
                   </div>
                 </div>
@@ -241,7 +241,7 @@
       }
 
       listEl.innerHTML = persone.map(p => `
-        <div onclick="navigate('scheda-persona', ${p.id})" class="bg-white p-3 rounded-xl border border-slate-200 flex items-center gap-3 shadow-sm active:bg-slate-50 transition">
+        <div onclick="navigate('scheda-persona', ${p.id})" class="bg-white p-3 rounded-xl border border-slate-200 flex items-center gap-3 shadow-sm active:bg-slate-50 transition cursor-pointer">
           <img src="${p.foto || defaultAvatar()}" loading="lazy" class="w-10 h-10 rounded-full object-cover border flex-shrink-0">
           <div class="flex-1 min-w-0">
             <h4 class="font-bold text-xs text-slate-800 truncate">${escapeHtml(p.cognome)} ${escapeHtml(p.nome)}</h4>
@@ -879,12 +879,13 @@
           'N.': i + 1,
           'Cognome': d.cognome,
           'Nome': d.nome,
-          'Data Nascita': formatDate(d.data_nascita),
-          'Luogo Nascita': d.luogo_nascita || '',
+          'Data di Nascita': formatDate(d.data_nascita),
+          'Luogo di Nascita': d.luogo_nascita || '',
           'Stato Presenza': d.presente ? 'PRESENTE' : 'ASSENTE'
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(rows);
+        autoFitColumns(worksheet, rows);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Partecipanti");
         XLSX.writeFile(workbook, `${lista.nome}_esportazione.xlsx`);
@@ -936,7 +937,7 @@
       renderSchedaPersona(document.getElementById('main-content'), personaId);
     }
 
-    // --- IMPOSTAZIONI, BACKUP, IMPORT/EXPORT EXCEL ---
+    // --- IMPOSTAZIONI, BACKUP, IMPORT/EXPORT EXCEL ROBUSTO ---
     function renderImpostazioni(container) {
       container.innerHTML = `
         <div class="space-y-4">
@@ -946,24 +947,24 @@
           <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
             <h3 class="text-xs font-bold text-slate-700 uppercase">Esporta Anagrafica in Excel</h3>
             <p class="text-[11px] text-slate-500">
-              Scarica un file Excel (<code>.xlsx</code>) completo con tutte le persone salvate nel database ed i relativi gruppi associati.
+              Scarica un file Excel (<code>.xlsx</code>) completo con tutte le persone salvate ed i relativi gruppi.
             </p>
             <button onclick="exportAllPeopleToExcel()" class="w-full p-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow active:bg-emerald-700">
               <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Scarica Anagrafica Excel (.xlsx)
             </button>
           </div>
 
-          <!-- IMPORTAZIONE MASSIVA PERSONE DA CSV / EXCEL -->
+          <!-- IMPORTAZIONE MASSIVA PERSONE DA EXCEL/CSV -->
           <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-            <h3 class="text-xs font-bold text-slate-700 uppercase">Importa Persone da CSV</h3>
+            <h3 class="text-xs font-bold text-slate-700 uppercase">Importa Persone da Excel / CSV</h3>
             <p class="text-[11px] text-slate-500">
-              Carica un file CSV formattato con le colonne:<br>
-              <code class="bg-slate-100 p-1 rounded font-mono text-[10px] block mt-1">Cognome, Nome, DataNascita (YYYY-MM-DD), LuogoNascita</code>
+              Carica un file Excel (<code>.xlsx</code>, <code>.xls</code>) o CSV con colonne:<br>
+              <code class="bg-slate-100 p-1 rounded font-mono text-[10px] block mt-1">Cognome | Nome | Data di Nascita | Luogo di Nascita</code>
             </p>
             
             <label class="w-full p-2.5 bg-emerald-50 text-emerald-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-emerald-200 cursor-pointer">
-              <i data-lucide="upload" class="w-4 h-4"></i> Seleziona File CSV
-              <input type="file" accept=".csv" onchange="importCSVPeople(event)" class="hidden">
+              <i data-lucide="upload" class="w-4 h-4"></i> Seleziona File Excel / CSV
+              <input type="file" accept=".xlsx, .xls, .csv" onchange="importExcelPeople(event)" class="hidden">
             </label>
           </div>
           
@@ -983,7 +984,7 @@
       `;
     }
 
-    // NUOVA FUNZIONE: ESPORTA TUTTE LE PERSONE IN EXCEL NATIVO (.xlsx)
+    // --- NUOVA ESPORTAZIONE EXCEL CON AUTO-FIT COLONNE ---
     async function exportAllPeopleToExcel() {
       const persone = await db.persone.toArray();
       if (persone.length === 0) {
@@ -1015,11 +1016,112 @@
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(rows);
+      autoFitColumns(worksheet, rows);
+
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Anagrafica Persone");
 
       const today = new Date().toISOString().split('T')[0];
       XLSX.writeFile(workbook, `Anagrafica_Persone_${today}.xlsx`);
+    }
+
+    // Helper: adatta la larghezza delle colonne al testo contenuto
+    function autoFitColumns(worksheet, jsonRows) {
+      if (!jsonRows || jsonRows.length === 0) return;
+      const colWidths = Object.keys(jsonRows[0]).map(key => ({
+        wch: Math.max(key.length, ...jsonRows.map(r => String(r[key] || '').length)) + 3
+      }));
+      worksheet['!cols'] = colWidths;
+    }
+
+    // --- NUOVO IMPORTATORE INTELLIGENTE PER FILE EXCEL / CSV ---
+    async function importExcelPeople(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(ev) {
+        try {
+          const data = new Uint8Array(ev.target.result);
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          
+          // Converte il foglio Excel in array di oggetti JSON
+          const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+          if (rawRows.length === 0) {
+            alert('Il file caricato sembra vuoto o non formattato correttamente.');
+            return;
+          }
+
+          let imported = 0;
+          let skipped = 0;
+
+          for (const row of rawRows) {
+            // Mappatura dinamica delle colonne: cerca nomi plausibili per le intestazioni
+            const keys = Object.keys(row);
+            
+            const cognomeKey = keys.find(k => k.toLowerCase().includes('cognome')) || keys[0];
+            const nomeKey = keys.find(k => k.toLowerCase().includes('nome')) || keys[1];
+            const dataKey = keys.find(k => k.toLowerCase().includes('data') || k.toLowerCase().includes('nascita')) || keys[2];
+            const luogoKey = keys.find(k => k.toLowerCase().includes('luogo') || k.toLowerCase().includes('città') || k.toLowerCase().includes('comune')) || keys[3];
+
+            const cognome = String(row[cognomeKey] || '').trim();
+            const nome = String(row[nomeKey] || '').trim();
+            let data_nascita = row[dataKey];
+            const luogo_nascita = String(row[luogoKey] || '').trim();
+
+            if (!nome || !cognome) continue; // Salta righe incomplete
+
+            // Normalizza formato data
+            if (data_nascita instanceof Date) {
+              data_nascita = data_nascita.toISOString().split('T')[0];
+            } else {
+              data_nascita = parseItalianDate(String(data_nascita));
+            }
+
+            // Controllo duplicati
+            const dup = await db.persone.where({ nome, cognome }).first();
+            if (!dup) {
+              await db.persone.add({
+                nome,
+                cognome,
+                data_nascita,
+                luogo_nascita,
+                foto: '',
+                data_inserimento: new Date().toISOString()
+              });
+              imported++;
+            } else {
+              skipped++;
+            }
+          }
+
+          alert(`Importazione completata con successo!\n\n• Nuovi nominativi inseriti: ${imported}\n• Duplicati saltati: ${skipped}`);
+          navigate('persone');
+
+        } catch (err) {
+          console.error(err);
+          alert('Errore nella lettura del file Excel/CSV. Assicurati che sia un file valido.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Helper: converte stringhe data italiane (GG/MM/AAAA) nel formato standard AAAA-MM-GG
+    function parseItalianDate(dateStr) {
+      if (!dateStr) return '';
+      dateStr = dateStr.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr; // Già ISO
+      const parts = dateStr.split(/[\/\.-]/);
+      if (parts.length === 3) {
+        const day = parts[0].padStart(2, '0');
+        const month = parts[1].padStart(2, '0');
+        const year = parts[2].length === 2 ? '19' + parts[2] : parts[2];
+        if (year.length === 4) return `${year}-${month}-${day}`;
+      }
+      return dateStr;
     }
 
     async function exportBackup() {
@@ -1057,55 +1159,6 @@
             navigate('home');
           }
         } catch(err) { alert('File di backup non valido.'); }
-      };
-      reader.readAsText(file);
-    }
-
-    async function importCSVPeople(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = async function(ev) {
-        const text = ev.target.result;
-        const lines = text.split(/\r?\n/);
-        let imported = 0;
-        let skipped = 0;
-
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-
-          if (i === 0 && (line.toLowerCase().includes('cognome') || line.toLowerCase().includes('nome'))) {
-            continue;
-          }
-
-          const cols = line.split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-          const cognome = cols[0] || '';
-          const nome = cols[1] || '';
-          const data_nascita = cols[2] || '';
-          const luogo_nascita = cols[3] || '';
-
-          if (!nome || !cognome) continue;
-
-          const dup = await db.persone.where({ nome, cognome }).first();
-          if (!dup) {
-            await db.persone.add({
-              nome,
-              cognome,
-              data_nascita,
-              luogo_nascita,
-              foto: '',
-              data_inserimento: new Date().toISOString()
-            });
-            imported++;
-          } else {
-            skipped++;
-          }
-        }
-
-        alert(`Importazione completata!\n• Nuovi nominativi inseriti: ${imported}\n• Duplicati saltati: ${skipped}`);
-        navigate('persone');
       };
       reader.readAsText(file);
     }
