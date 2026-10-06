@@ -1,46 +1,37 @@
-async function importCSVPeople(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+const CACHE_NAME = 'eventi-db-v3';
+const ASSETS = [
+  './',
+  './index.html',
+  'https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js',
+  'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js',
+  'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+  'https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js'
+];
 
-  const reader = new FileReader();
-  reader.onload = async function(ev) {
-    const text = ev.target.result;
-    const lines = text.split('\n');
-    let imported = 0;
-    let skipped = 0;
+// Installazione Service Worker e salvataggio in Cache degli asset
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
+  self.skipWaiting();
+});
 
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+// Pulizia delle vecchie versioni della cache
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    })
+  );
+  self.clients.claim();
+});
 
-      // Parsing delle colonne CSV (presume separatore virgola o punto e virgola)
-      const cols = line.split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-      const cognome = cols[0] || '';
-      const nome = cols[1] || '';
-      const data_nascita = cols[2] || '';
-      const luogo_nascita = cols[3] || '';
-
-      if (!nome || !cognome) continue;
-
-      // Controllo duplicati
-      const dup = await db.persone.where({ nome, cognome }).first();
-      if (!dup) {
-        await db.persone.add({
-          nome,
-          cognome,
-          data_nascita,
-          luogo_nascita,
-          foto: '',
-          data_inserimento: new Date().toISOString()
-        });
-        imported++;
-      } else {
-        skipped++;
-      }
-    }
-
-    alert(`Importazione completata!\nNuovi inseriti: ${imported}\nDuplicati saltati: ${skipped}`);
-    navigate('persone');
-  };
-  reader.readAsText(file);
-}
+// Gestione delle richieste di rete / risposta da cache
+self.addEventListener('fetch', (e) => {
+  e.respondWith(
+    caches.match(e.request).then((res) => res || fetch(e.request))
+  );
+});
