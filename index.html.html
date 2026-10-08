@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full bg-[#FAF7F2] text-stone-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FitTrack Studio - Scheda Gym Total Body</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        warm: {
+                            50: '#FAF7F2',   
+                            100: '#F4ECE1',  
+                            200: '#E8DCCB',  
+                            300: '#D5C3AE',  
+                            500: '#C86D51',  
+                            600: '#B2593F',  
+                            700: '#8C412C',  
+                            accent: '#D9826C', 
+                            gold: '#E0A868'    
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- jsPDF CDN for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes pulse-warm-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 0.35; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .timer-pulse { animation: pulse-warm-ring 2s infinite ease-in-out; }
+
+        /* Smooth Movement Cycles for Vintage SVG Line-Art */
+        @keyframes art-press-move { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(12px, -12px); } }
+        @keyframes art-chest-move { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(14px, 0); } }
+        @keyframes art-lat-move { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, 16px); } }
+        @keyframes art-curl-move { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-50deg); } }
+        @keyframes art-shoulder-move { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, -16px); } }
+        @keyframes art-crunch-move { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(15deg); } }
+        @keyframes art-hack-move { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(10px, -14px); } }
+        @keyframes art-pulley-move { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-12px, 0); } }
+        @keyframes art-abd-l { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-16deg); } }
+        @keyframes art-abd-r { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(16deg); } }
+        @keyframes art-pec-l { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(28deg); } }
+        @keyframes art-pec-r { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-28deg); } }
+        @keyframes art-tricep-move { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(45deg); } }
+
+        @keyframes vintage-muscle-primary {
+            0%, 100% { fill: #D9534F; fill-opacity: 0.75; }
+            50% { fill: #C9302C; fill-opacity: 1; filter: drop-shadow(0 0 3px rgba(201, 48, 44, 0.6)); }
+        }
+        @keyframes vintage-muscle-secondary {
+            0%, 100% { fill: #5CB85C; fill-opacity: 0.65; }
+            50% { fill: #449D44; fill-opacity: 0.95; }
+        }
+
+        .m-art-primary { animation: vintage-muscle-primary 3s infinite ease-in-out; }
+        .m-art-secondary { animation: vintage-muscle-secondary 3s infinite ease-in-out; }
+
+        .anim-press-art { animation: art-press-move 3.2s infinite ease-in-out; }
+        .anim-chest-art { animation: art-chest-move 3s infinite ease-in-out; }
+        .anim-lat-art { animation: art-lat-move 3.2s infinite ease-in-out; }
+        .anim-curl-art { animation: art-curl-move 3s infinite ease-in-out; transform-origin: 100px 105px; }
+        .anim-shoulder-art { animation: art-shoulder-move 3s infinite ease-in-out; }
+        .anim-crunch-art { animation: art-crunch-move 2.8s infinite ease-in-out; transform-origin: 80px 100px; }
+        .anim-hack-art { animation: art-hack-move 3.2s infinite ease-in-out; }
+        .anim-pulley-art { animation: art-pulley-move 3s infinite ease-in-out; }
+        .anim-abd-l-art { animation: art-abd-l 2.8s infinite ease-in-out; transform-origin: 75px 100px; }
+        .anim-abd-r-art { animation: art-abd-r 2.8s infinite ease-in-out; transform-origin: 105px 100px; }
+        .anim-pec-l-art { animation: art-pec-l 3s infinite ease-in-out; transform-origin: 50px 70px; }
+        .anim-pec-r-art { animation: art-pec-r 3s infinite ease-in-out; transform-origin: 130px 70px; }
+        .anim-tricep-art { animation: art-tricep-move 2.8s infinite ease-in-out; transform-origin: 85px 70px; }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-hidden antialiased bg-[#FAF7F2] text-stone-800 selection:bg-warm-500 selection:text-white">
+
+    <header class="bg-[#F4ECE1]/90 backdrop-blur-md border-b border-stone-200/80 shrink-0 sticky top-0 z-30 px-4 py-3">
+        <div class="flex items-center justify-between max-w-md mx-auto">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-warm-500 flex items-center justify-center text-white font-bold shadow-md shadow-warm-500/20">
+                    <i class="fa-solid fa-dumbbell text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold leading-tight tracking-tight text-stone-900 flex items-center gap-2">
+                        FitTrack <span class="text-[10px] px-2 py-0.5 rounded-full bg-warm-500/10 text-warm-600 font-bold border border-warm-500/20">Donna 26y</span>
+                    </h1>
+                    <p class="text-[11px] text-stone-500 font-medium">Total Body • Illustrazioni Anatomiche Tech</p>
+                </div>
+            </div>
+            <button id="todayQuickBtn" onclick="switchTab('workout')" class="px-3 py-1.5 rounded-xl bg-white hover:bg-stone-50 text-xs font-bold text-warm-600 border border-stone-200 shadow-sm transition flex items-center gap-1.5">
+                <i class="fa-solid fa-play text-warm-500 text-xs"></i>
+                <span>Inizia</span>
+            </button>
+        </div>
+
+        <!-- Session Completion Bar -->
+        <div id="sessionProgressContainer" class="max-w-md mx-auto mt-2.5 hidden">
+            <div class="flex justify-between items-center text-[10px] text-stone-500 mb-1 font-semibold">
+                <span id="sessionProgressLabel">Completamento Sessione: 0/18 Serie</span>
+                <span id="sessionProgressPercent" class="text-warm-600 font-bold">0%</span>
+            </div>
+            <div class="w-full h-2 bg-stone-200/80 rounded-full overflow-hidden border border-stone-300/40">
+                <div id="sessionProgressBar" class="h-full bg-gradient-to-r from-warm-500 to-warm-accent w-0 transition-all duration-500"></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto no-scrollbar pb-24 p-4 max-w-md mx-auto w-full">
+
+        <section id="view-dashboard" class="space-y-5">
+            <div class="p-5 rounded-2xl bg-white border border-stone-200/80 shadow-sm relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-warm-200/50 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="relative z-10">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-warm-600">Schede Guidate Macchine</span>
+                    <h2 class="text-xl font-bold mt-0.5 text-stone-900">Allenamento di Oggi</h2>
+                    <p class="text-xs text-stone-500 mt-1 leading-relaxed">
+                        Sedute da ~70 minuti. Alterna le due schede nei 3 giorni settimanali.
+                    </p>
+                    
+                    <div class="mt-4 p-3 rounded-xl bg-[#FAF7F2] border border-stone-200 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <i class="fa-solid fa-rotate text-warm-500 text-sm"></i>
+                            <div>
+                                <div class="text-xs font-bold text-stone-800" id="currentWeekPattern">Settimana Attuale: A - B - A</div>
+                                <div class="text-[10px] text-stone-500">Pianificazione Lun - Mer - Ven</div>
+                            </div>
+                        </div>
+                        <button onclick="toggleWeekPattern()" class="text-[11px] px-2.5 py-1 rounded-lg bg-white text-stone-700 hover:bg-stone-100 border border-stone-200 font-semibold shadow-xs">Inverti</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule Cards -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center gap-2">
+                    <i class="fa-regular fa-calendar-days text-warm-500"></i> Calendario Settimanale
+                </h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <div onclick="selectWorkoutFromDash('A')" class="p-3 rounded-2xl bg-white border border-stone-200 hover:border-warm-500 transition cursor-pointer shadow-xs">
+                        <div class="text-[10px] font-bold uppercase text-stone-400">Lunedì</div>
+                        <div class="text-sm font-black text-warm-600 mt-0.5" id="dashDayMon">Scheda A</div>
+                        <div class="text-[10px] text-stone-500 mt-1">Leg Press, Chest, Lat</div>
+                    </div>
+                    <div onclick="selectWorkoutFromDash('B')" class="p-3 rounded-2xl bg-white border border-stone-200 hover:border-warm-500 transition cursor-pointer shadow-xs">
+                        <div class="text-[10px] font-bold uppercase text-stone-400">Mercoledì</div>
+                        <div class="text-sm font-black text-warm-accent mt-0.5" id="dashDayWed">Scheda B</div>
+                        <div class="text-[10px] text-stone-500 mt-1">Hack, Pulley, Abd</div>
+                    </div>
+                    <div onclick="selectWorkoutFromDash('A')" class="p-3 rounded-2xl bg-white border border-stone-200 hover:border-warm-500 transition cursor-pointer shadow-xs">
+                        <div class="text-[10px] font-bold uppercase text-stone-400">Venerdì</div>
+                        <div class="text-sm font-black text-warm-600 mt-0.5" id="dashDayFri">Scheda A</div>
+                        <div class="text-[10px] text-stone-500 mt-1">Leg Press, Chest, Lat</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Routine Cards -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-stone-500">Seleziona Scheda</h3>
+                
+                <div onclick="openWorkoutRoutine('A')" class="p-4 rounded-2xl bg-white border border-stone-200 hover:border-warm-500 transition cursor-pointer flex items-center justify-between shadow-xs">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-warm-500/10 text-warm-600">SCHEDA A</span>
+                            <span class="text-xs text-stone-400"><i class="fa-regular fa-clock"></i> ~70 min</span>
+                        </div>
+                        <h4 class="font-bold text-stone-900">Total Body A (Press, Lat, Chest)</h4>
+                        <p class="text-xs text-stone-500">6 Macchine guidate • 18 Serie totali</p>
+                    </div>
+                    <div class="w-9 h-9 rounded-full bg-warm-500/10 border border-warm-500/20 flex items-center justify-center text-warm-600">
+                        <i class="fa-solid fa-play text-xs"></i>
+                    </div>
+                </div>
+
+                <div onclick="openWorkoutRoutine('B')" class="p-4 rounded-2xl bg-white border border-stone-200 hover:border-warm-accent transition cursor-pointer flex items-center justify-between shadow-xs">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-warm-accent/10 text-warm-accent">SCHEDA B</span>
+                            <span class="text-xs text-stone-400"><i class="fa-regular fa-clock"></i> ~70 min</span>
+                        </div>
+                        <h4 class="font-bold text-stone-900">Total Body B (Hack, Pulley, Glute)</h4>
+                        <p class="text-xs text-stone-500">6 Macchine guidate • 18 Serie totali</p>
+                    </div>
+                    <div class="w-9 h-9 rounded-full bg-warm-accent/10 border border-warm-accent/20 flex items-center justify-center text-warm-accent">
+                        <i class="fa-solid fa-play text-xs"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warmup Banner -->
+            <div onclick="scrollToWarmup()" class="p-4 rounded-2xl bg-warm-100/60 border border-stone-200 flex items-center gap-3 cursor-pointer hover:bg-warm-100 transition shadow-xs">
+                <div class="w-10 h-10 rounded-xl bg-warm-gold/20 flex items-center justify-center text-warm-700 shrink-0">
+                    <i class="fa-solid fa-fire text-base"></i>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-stone-900">Riscaldamento Preventivo (10-15 min)</h4>
+                    <p class="text-[11px] text-stone-500">Cardio leggero + mobilità dinamica consigliata.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-workout" class="hidden space-y-5">
+            <div class="flex bg-stone-200/70 p-1 rounded-2xl border border-stone-300/60">
+                <button id="btnTabSchedaA" onclick="setActiveRoutine('A')" class="flex-1 py-2 text-xs font-bold rounded-xl transition text-white bg-warm-500 shadow-sm">
+                    Scheda A (Total Body)
+                </button>
+                <button id="btnTabSchedaB" onclick="setActiveRoutine('B')" class="flex-1 py-2 text-xs font-bold rounded-xl transition text-stone-600 hover:text-stone-900">
+                    Scheda B (Total Body)
+                </button>
+            </div>
+
+            <!-- Warmup Section -->
+            <div id="warmupSection" class="p-4 rounded-2xl bg-white border border-stone-200 space-y-3 shadow-xs">
+                <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+                    <h3 class="text-xs font-bold text-warm-600 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-fire"></i> Step 1: Riscaldamento (10-15 min)
+                    </h3>
+                    <span class="text-[10px] px-2 py-0.5 rounded bg-warm-500/10 text-warm-600 font-semibold">Fondamentale</span>
+                </div>
+                
+                <div class="space-y-2 text-xs text-stone-700">
+                    <div class="p-2.5 rounded-xl bg-[#FAF7F2] border border-stone-200 flex items-start gap-3">
+                        <div class="p-2 rounded-lg bg-warm-gold/20 text-warm-700 shrink-0">
+                            <i class="fa-solid fa-person-walking"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-stone-900">1. Cardio Attivo (5-7 minuti)</div>
+                            <div class="text-[11px] text-stone-500 mt-0.5">Tapis Roulant (pendenza 3%, velocità media) o Ellittica per alzare la temperatura corporea.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-2.5 rounded-xl bg-[#FAF7F2] border border-stone-200 space-y-2">
+                        <div class="font-bold text-stone-900 flex items-center gap-2">
+                            <i class="fa-solid fa-arrows-spin text-warm-500"></i> 2. Mobilità Dinamica (5 minuti)
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-[11px]">
+                            <div class="bg-white p-2 rounded-lg border border-stone-200">
+                                <span class="font-bold text-warm-600 block">Circonduzioni Braccia</span>
+                                10 avanti + 10 indietro
+                            </div>
+                            <div class="bg-white p-2 rounded-lg border border-stone-200">
+                                <span class="font-bold text-warm-600 block">Rotazioni Bacino</span>
+                                10 senso orario + antiorario
+                            </div>
+                            <div class="bg-white p-2 rounded-lg border border-stone-200">
+                                <span class="font-bold text-warm-600 block">Slanci Gambe</span>
+                                10 frontali + 10 laterali
+                            </div>
+                            <div class="bg-white p-2 rounded-lg border border-stone-200">
+                                <span class="font-bold text-warm-600 block">Cat-Cow Colonna</span>
+                                8-10 ripetizioni lente
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Exercise List Container -->
+            <div id="exerciseListContainer" class="space-y-4"></div>
+        </section>
+
+        <section id="view-stats" class="hidden space-y-5">
+            <div class="p-4 rounded-2xl bg-white border border-stone-200 space-y-3 shadow-xs">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center gap-2">
+                    <i class="fa-solid fa-file-export text-warm-500"></i> Esporta i Tuoi Dati
+                </h3>
+                <p class="text-xs text-stone-500">
+                    Scarica lo storico completo delle tue sessioni di allenamento per conservarlo o condividerlo.
+                </p>
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button onclick="exportToCSV()" class="py-2.5 px-3 rounded-xl bg-[#FAF7F2] hover:bg-stone-100 text-warm-600 border border-stone-200 text-xs font-bold flex items-center justify-center gap-2 transition shadow-xs">
+                        <i class="fa-solid fa-file-csv text-base"></i>
+                        <span>Esporta CSV</span>
+                    </button>
+                    <button onclick="exportToPDF()" class="py-2.5 px-3 rounded-xl bg-[#FAF7F2] hover:bg-stone-100 text-warm-700 border border-stone-200 text-xs font-bold flex items-center justify-center gap-2 transition shadow-xs">
+                        <i class="fa-solid fa-file-pdf text-base"></i>
+                        <span>Scarica PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white border border-stone-200 space-y-3 shadow-xs">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-warm-500"></i> Grafico Progresso Carichi
+                </h3>
+                <div>
+                    <select id="chartExerciseSelect" onchange="updateChart()" class="w-full bg-[#FAF7F2] border border-stone-200 text-stone-800 text-xs rounded-xl p-2.5 font-medium focus:ring-1 focus:ring-warm-500"></select>
+                </div>
+                <div class="bg-[#FAF7F2] p-3 rounded-xl border border-stone-200 h-64 relative">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white border border-stone-200 space-y-3 shadow-xs">
+                <div class="flex items-center justify-between border-b border-stone-100 pb-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-warm-500"></i> Ultimi Allenamenti Salvati
+                    </h3>
+                    <button onclick="clearAllData()" class="text-[10px] text-red-500 hover:underline font-medium">Cancella Dati</button>
+                </div>
+                <div id="workoutHistoryLogs" class="space-y-2 text-xs text-stone-700"></div>
+            </div>
+        </section>
+
+        <section id="view-tips" class="hidden space-y-4">
+            <div class="p-4 rounded-2xl bg-white border border-stone-200 flex items-center gap-3 shadow-xs">
+                <div class="w-10 h-10 rounded-xl bg-warm-500/10 text-warm-600 flex items-center justify-center font-bold text-lg shrink-0">
+                    <i class="fa-solid fa-user-doctor"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-stone-900">I Consigli del Tuo Personal Trainer</h3>
+                    <p class="text-[11px] text-stone-500">Regole d'oro per iniziare al meglio in sala pesi</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="p-4 rounded-2xl bg-white border border-stone-200 space-y-1 shadow-xs">
+                    <div class="flex items-center gap-2 text-warm-600 font-bold text-xs uppercase tracking-wider">
+                        <i class="fa-solid fa-weight-hanging"></i> 1. Scelta del Carico (RPE 7-8)
+                    </div>
+                    <p class="text-xs text-stone-600 leading-relaxed pt-1">
+                        Nelle prime 2 settimane usa un peso leggero con cui riesci a completare tutte le ripetizioni sentendo di poterne fare ancora 2 o 3. L'obiettivo primario è imparare la coordinazione sul macchinario.
+                    </p>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-white border border-stone-200 space-y-1 shadow-xs">
+                    <div class="flex items-center gap-2 text-warm-accent font-bold text-xs uppercase tracking-wider">
+                        <i class="fa-solid fa-lungs"></i> 2. Respirazione e Ritmo
+                    </div>
+                    <p class="text-xs text-stone-600 leading-relaxed pt-1">
+                        Controlla il movimento: impiega 2 secondi nella fase di spinta/trazione e 3 secondi nella fase di ritorno controllato. Espira quando spingi/tiri, inspira nella fase di ritorno.
+                    </p>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-white border border-stone-200 space-y-1 shadow-xs">
+                    <div class="flex items-center gap-2 text-warm-gold font-bold text-xs uppercase tracking-wider">
+                        <i class="fa-solid fa-child"></i> 3. Defaticamento Finale
+                    </div>
+                    <p class="text-xs text-stone-600 leading-relaxed pt-1">
+                        A fine sessione dedica 5 minuti a un po' di stretching leggero sui muscoli lavorati o camminata lenta sul tapis roulant per favorire la circolazione ed il recupero.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="muscleModal" class="fixed inset-0 z-50 bg-stone-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity duration-300">
+        <div class="bg-[#FAF5EB] border border-[#E0D5C1] w-full max-w-md rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto no-scrollbar p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-[#E0D5C1] pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-warm-500/10 text-warm-600 flex items-center justify-center text-sm font-bold">
+                        <i class="fa-solid fa-book-bookmark"></i>
+                    </div>
+                    <div>
+                        <h3 id="modalExerciseTitle" class="text-sm font-bold text-stone-900 leading-tight">Leg Press 45°</h3>
+                        <p id="modalExerciseMachine" class="text-[11px] text-stone-500">Tavola Anatomica Vintage Line-Art</p>
+                    </div>
+                </div>
+                <button onclick="closeMuscleModal()" class="w-8 h-8 rounded-full bg-white text-stone-500 hover:text-stone-900 flex items-center justify-center text-xs border border-stone-200">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Vintage Illustration Display -->
+            <div class="p-2 bg-[#FAF5EB] rounded-2xl border border-[#DCD0B9] flex flex-col items-center justify-center relative shadow-inner">
+                <div id="modalSvgContainer" class="w-full h-64 flex items-center justify-center"></div>
+                <div class="flex items-center gap-4 text-[10px] mt-2 bg-white px-3 py-1.5 rounded-full border border-[#DCD0B9] font-bold shadow-xs">
+                    <span class="flex items-center gap-1.5 text-red-700">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
+                        Primario (Rosso / Red)
+                    </span>
+                    <span class="flex items-center gap-1.5 text-emerald-800">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span>
+                        Sinergico (Verde / Green)
+                    </span>
+                </div>
+            </div>
+
+            <div class="space-y-2.5 text-xs">
+                <div class="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-red-700 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-circle-dot text-red-600 text-[10px]"></i> Muscolo Agonista
+                    </div>
+                    <div id="modalPrimaryMuscle" class="text-stone-900 font-bold text-xs">Quadricipiti</div>
+                    <p id="modalPrimaryDesc" class="text-[11px] text-stone-600 mt-1"></p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-circle text-emerald-700 text-[9px]"></i> Muscoli Sinergici
+                    </div>
+                    <div id="modalSecondaryMuscle" class="text-stone-900 font-bold text-xs">Glutei, Femorali</div>
+                    <p id="modalSecondaryDesc" class="text-[11px] text-stone-600 mt-1"></p>
+                </div>
+
+                <div class="p-3 rounded-xl bg-white border border-[#DCD0B9]">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-stone-700 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-compass-drafting"></i> Esecuzione & Postura
+                    </div>
+                    <p id="modalExecutionTips" class="text-[11px] text-stone-600 leading-relaxed"></p>
+                </div>
+            </div>
+
+            <button onclick="closeMuscleModal()" class="w-full py-2.5 rounded-xl bg-warm-500 text-white font-bold text-xs hover:bg-warm-600 transition shadow-sm">
+                Chiudi Tavola Anatomica
+            </button>
+        </div>
+    </div>
+
+    <!-- Rest Timer Overlay -->
+    <div id="timerBar" class="fixed bottom-16 left-0 right-0 max-w-md mx-auto px-4 z-20 transition-all transform translate-y-32 opacity-0 pointer-events-none">
+        <div class="p-3.5 rounded-2xl bg-white/95 border border-warm-500/40 backdrop-blur-md shadow-xl flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="relative w-10 h-10 flex items-center justify-center">
+                    <div class="absolute inset-0 rounded-full bg-warm-500/20 timer-pulse"></div>
+                    <i class="fa-solid fa-stopwatch text-warm-500 text-lg relative z-10"></i>
+                </div>
+                <div>
+                    <div class="text-[10px] text-stone-400 font-bold uppercase">Tempo di Recupero</div>
+                    <div id="timerDisplay" class="text-lg font-black text-stone-900 tracking-wider font-mono">00:90</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="addTimerSeconds(15)" class="px-2.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs font-bold text-stone-700 border border-stone-200">+15s</button>
+                <button onclick="stopTimer()" class="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-xs font-bold text-red-600 border border-red-200">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-stone-200 z-30 max-w-md mx-auto">
+        <div class="grid grid-cols-4 h-16">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center justify-center text-warm-500 space-y-1">
+                <i class="fa-solid fa-house text-base"></i>
+                <span class="text-[10px] font-bold">Home</span>
+            </button>
+            <button onclick="switchTab('workout')" id="nav-workout" class="flex flex-col items-center justify-center text-stone-400 hover:text-stone-700 space-y-1">
+                <i class="fa-solid fa-dumbbell text-base"></i>
+                <span class="text-[10px] font-bold">Scheda</span>
+            </button>
+            <button onclick="switchTab('stats')" id="nav-stats" class="flex flex-col items-center justify-center text-stone-400 hover:text-stone-700 space-y-1">
+                <i class="fa-solid fa-chart-simple text-base"></i>
+                <span class="text-[10px] font-bold">Progressi</span>
+            </button>
+            <button onclick="switchTab('tips')" id="nav-tips" class="flex flex-col items-center justify-center text-stone-400 hover:text-stone-700 space-y-1">
+                <i class="fa-solid fa-lightbulb text-base"></i>
+                <span class="text-[10px] font-bold">Consigli</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        const EXERCISES_DATA = {
+            A: [
+                {
+                    id: 'leg_press',
+                    name: 'Leg Press 45°',
+                    machine: 'Macchina Leg Press Inclinata',
+                    sets: 3,
+                    reps: '10-12',
+                    rest: 90,
+                    target: 'Cosce e Glutei',
+                    primaryMuscle: 'QUADRICEPS (Vastus Lateralis, Medialis, Rectus Femoris)',
+                    secondaryMuscles: 'GLUTES, HAMSTRINGS, GASTROCNEMIUS',
+                    primaryDesc: 'Svolge il lavoro principale estendendo l\'articolazione del ginocchio durante la spinta della pedana.',
+                    secondaryDesc: 'Assistono nella stabilizzazione dell\'anca e della caviglia.',
+                    instructions: 'Schiena e glutei saldamente aderenti allo schienale. Piedi larghezza spalle. Scendi fino a circa 90° al ginocchio e spingi sui talloni.',
+                    svgType: 'leg_press'
+                },
+                {
+                    id: 'chest_press',
+                    name: 'Chest Press',
+                    machine: 'Macchina Chest Press Guidata',
+                    sets: 3,
+                    reps: '10-12',
+                    rest: 90,
+                    target: 'Pettorali, Spalle, Tricipiti',
+                    primaryMuscle: 'PECTORALIS MAJOR (Sternocostalis & Clavicularis)',
+                    secondaryMuscles: 'ANTERIOR DELTOID, TRICEPS BRACHII',
+                    primaryDesc: 'Si contrae adducendo gli omeri in avanti sul piano guidato della macchina.',
+                    secondaryDesc: 'I tricipiti estendono gli avambracci; il deltoide anteriore guida la spinta.',
+                    instructions: 'Maniglie ad altezza centro petto. Scapole chiuse e basse. Spingi espirando e controlla il ritorno.',
+                    svgType: 'chest_press'
+                },
+                {
+                    id: 'lat_machine',
+                    name: 'Lat Machine (Presa Avanti)',
+                    machine: 'Torretta Cavi Lat Pulldown',
+                    sets: 3,
+                    reps: '10-12',
+                    rest: 90,
+                    target: 'Dorso e Braccia',
+                    primaryMuscle: 'LATISSIMUS DORSI (Gran Dorsale)',
+                    secondaryMuscles: 'RHOMBOIDS, BICEPS BRACHII, TERES MAJOR',
+                    primaryDesc: 'Tira gli omeri verso il basso e indietro, scolpendo e tonificando il dorso.',
+                    secondaryDesc: 'I bicipiti e i romboidi flettono le braccia e addicono le scapole.',
+                    instructions: 'Impugnatura poco più ampia delle spalle. Tira verso la clavicola portando i gomiti in basso.',
+                    svgType: 'lat_machine'
+                },
+                {
+                    id: 'leg_curl',
+                    name: 'Leg Curl',
+                    machine: 'Macchina Femorali Seduta / Sdraiata',
+                    sets: 3,
+                    reps: '12',
+                    rest: 60,
+                    target: 'Ischiocrurali (Posteriore Coscia)',
+                    primaryMuscle: 'HAMSTRINGS (Biceps Femoris, Semitendinosus)',
+                    secondaryMuscles: 'GASTROCNEMIUS, GLUTEUS MAXIMUS',
+                    primaryDesc: 'Flette la gamba verso i glutei isolando il retro coscia.',
+                    secondaryDesc: 'Il polpaccio supporta la prima fase della flessione.',
+                    instructions: 'Perno allineato al ginocchio. Fletti le gambe con decisione e ritorna lentamente.',
+                    svgType: 'leg_curl'
+                },
+                {
+                    id: 'shoulder_press',
+                    name: 'Shoulder Press',
+                    machine: 'Macchina Distensioni Spalle',
+                    sets: 3,
+                    reps: '10-12',
+                    rest: 90,
+                    target: 'Spalle e Deltoidi',
+                    primaryMuscle: 'ANTERIOR & LATERAL DELTOID',
+                    secondaryMuscles: 'TRICEPS BRACHII, TRAPEZIUS',
+                    primaryDesc: 'Solleva le braccia sopra la testa tonificando la rotondità della spalla.',
+                    secondaryDesc: 'I tricipiti completano l\'estensione del gomito in alto.',
+                    instructions: 'Spinta verso l\'alto mantenendo i gomiti leggermente avanzati rispetto al busto.',
+                    svgType: 'shoulder_press'
+                },
+                {
+                    id: 'crunch_machine',
+                    name: 'Crunch Addominale Guidato',
+                    machine: 'Macchina Crunch Addominale',
+                    sets: 3,
+                    reps: '15',
+                    rest: 60,
+                    target: 'Addome e Core',
+                    primaryMuscle: 'RECTUS ABDOMINIS (Addome Anteriore)',
+                    secondaryMuscles: 'OBLIQUES, TRANSVERSE ABDOMINIS',
+                    primaryDesc: 'Flette il tronco avvicinando il costato al bacino in contrazione.',
+                    secondaryDesc: 'Gli obliqui stabilizzano il bacino durante la chiusura.',
+                    instructions: 'Espira svuotando completamente l\'addome nella fase di flessione avanti.',
+                    svgType: 'crunch_machine'
+                }
+            ],
+            B: [
+                {
+                    id: 'hack_squat',
+                    name: 'Hack Squat / Leg Extension',
+                    machine: 'Macchina Hack Squat Inclinata',
+                    sets: 3,
+                    reps: '10-12',
+                    rest: 90,
+                    target: 'Quadricipiti e Glutei',
+                    primaryMuscle: 'QUADRICEPS (Rectus Femoris, Vastus Medialis)',
+                    secondaryMuscles: 'GLUTEUS MAXIMUS, ADDUCTORS',
+                    primaryDesc: 'Guida la flessione delle gambe garantendo totale protezione lombare.',
+                    secondaryDesc: 'I glutei sostengono la fase di estensione in risalita.',
+                    instructions: 'Spalle aderenti ai cuscinetti. Scendi fin verso 90° e risali senza bloccare le ginocchia.',
+                    svgType: 'hack_squat'
+                },
+                {
+                    id: 'pulley_basso',
+                    name: 'Pulley Basso (Seated Cable Row)',
+                    machine: 'Macchina Cavi Basso con Triangolo',
+                    sets: 3,
+                    reps: '10-12',
+                    rest: 90,
+                    target: 'Dorso, Romboidi e Postura',
+                    primaryMuscle: 'RHOMBOIDS, LATISSIMUS DORSI, TRAPEZIUS',
+                    secondaryMuscles: 'BICEPS BRACHII, ERECTOR SPINAE',
+                    primaryDesc: 'Retrae le scapole portando l\'impugnatura verso l\'ombelico e migliorando la postura.',
+                    secondaryDesc: 'I bicipiti assistono nella trazione del cavo.',
+                    instructions: 'Busto eretto, petto in fuori. Tira al tronco stringendo bene le scapole.',
+                    svgType: 'pulley_basso'
+                },
+                {
+                    id: 'abductor_glute',
+                    name: 'Abductor Machine (Glute Focus)',
+                    machine: 'Macchina Seduta Abductor',
+                    sets: 3,
+                    reps: '12-15',
+                    rest: 90,
+                    target: 'Glutei ed Esterno Coscia',
+                    primaryMuscle: 'GLUTEUS MEDIUS & MAXIMUS (Upper Portion)',
+                    secondaryMuscles: 'TENSOR FASCIAE LATAE, PIRIFORMIS',
+                    primaryDesc: 'Apre le cosce verso l\'esterno definendo la porzione alta dei glutei.',
+                    secondaryDesc: 'I rotatori dell\'anca guidano l\'apertura controllata.',
+                    instructions: 'Busto inclinato avanti per accentuare il carico sui glutei. Apri con controllo e sosta 1 secondo.',
+                    svgType: 'abductor_glute'
+                },
+                {
+                    id: 'pectoral_machine',
+                    name: 'Pectoral Machine (Pec Deck)',
+                    machine: 'Macchina Pectoral Fly Sagomata',
+                    sets: 3,
+                    reps: '12',
+                    rest: 60,
+                    target: 'Pettorali (Isolamento)',
+                    primaryMuscle: 'PECTORALIS MAJOR (Sternal Fibers)',
+                    secondaryMuscles: 'ANTERIOR DELTOID',
+                    primaryDesc: 'Adduce le braccia al centro del petto isolando il gran pettorale.',
+                    secondaryDesc: 'Il deltoide anteriore stabilizza l\'arco di movimento.',
+                    instructions: 'Unisci le leve al centro petto sentendo la contrazione, poi riapri piano.',
+                    svgType: 'pectoral_machine'
+                },
+                {
+                    id: 'triceps_pushdown',
+                    name: 'Pushdown Tricipiti al Cavo',
+                    machine: 'Torretta Cavo Alto con Corda',
+                    sets: 3,
+                    reps: '12-15',
+                    rest: 60,
+                    target: 'Braccia (Tricipiti)',
+                    primaryMuscle: 'TRICEPS BRACHII (Lateral, Medial, Long Head)',
+                    secondaryMuscles: 'FOREARM FLEXORS & ANCONEUS',
+                    primaryDesc: 'Estende il gomito verso il basso tonificando la parte posteriore delle braccia.',
+                    secondaryDesc: 'Gli avambracci stabilizzano la presa sulla corda.',
+                    instructions: 'Gomiti fissi ai fianchi. Spingi la corda in basso aprendola leggermente a fine corsa.',
+                    svgType: 'triceps_pushdown'
+                },
+                {
+                    id: 'plank',
+                    name: 'Plank Isometrico su Tappetino',
+                    machine: 'Tappetino Fitness',
+                    sets: 3,
+                    reps: '30-45 sec',
+                    rest: 60,
+                    target: 'Core, Addome e Postura',
+                    primaryMuscle: 'TRANSVERSE ABDOMINIS, RECTUS ABDOMINIS',
+                    secondaryMuscles: 'GLUTES, DELTOIDS, QUADRICEPS',
+                    primaryDesc: 'Lavoro isometrico profondo sul core per stabilizzare la colonna e la vita.',
+                    secondaryDesc: 'Spalle e glutei mantengono il corpo teso e parallelo al suolo.',
+                    instructions: 'Avambracci a terra, gomiti sotto le spalle. Corpo perfettamente in linea.',
+                    svgType: 'plank'
+                }
+            ]
+        };
+
+        function getVintageLineArtSvg(type) {
+            const bgBg = "#FAF5EB"; // Warm vintage paper texture background
+            const lineStroke = "#2C2825"; // Charcoal clean tech drawing lines
+            const redPrimary = "#D9534F"; // Coral Red muscle highlight
+            const greenSecondary = "#5CB85C"; // Green secondary highlight
+
+            switch(type) {
+                case 'leg_press':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <!-- Tech Header Labels -->
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">45-DEGREE LEG PRESS</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">MUSCLES ACTIVATED: QUADRICEPS (RED), GLUTES (GREEN)</text>
+                        
+                        <!-- Machine Chassis Vintage Drawing -->
+                        <path d="M 25 160 L 255 160 M 35 160 L 235 45" stroke="${lineStroke}" stroke-width="2"/>
+                        <rect x="225" y="35" width="30" height="120" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                        <rect x="230" y="70" width="20" height="75" stroke="${lineStroke}" stroke-width="1" fill="#EADCC9"/> <!-- Weight Stack -->
+                        
+                        <!-- Backrest & Seat -->
+                        <rect x="35" y="85" width="10" height="65" rx="3" transform="rotate(-38 35 85)" fill="#EADCC9" stroke="${lineStroke}" stroke-width="1.5"/>
+                        <rect x="25" y="142" width="35" height="8" rx="2" fill="#EADCC9" stroke="${lineStroke}" stroke-width="1.5"/>
+
+                        <!-- Female Body Line-Art -->
+                        <circle cx="52" cy="62" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/> <!-- Head -->
+                        <path d="M 56 72 Q 62 88, 68 122 L 85 122" stroke="${lineStroke}" stroke-width="2" fill="none"/> <!-- Torso -->
+
+                        <!-- Glute Muscle Highlight (GREEN) -->
+                        <path d="M 62 112 C 70 108, 80 112, 76 126 C 68 128, 62 124, 62 112 Z" fill="${greenSecondary}" class="m-art-secondary" stroke="${lineStroke}" stroke-width="0.8"/>
+
+                        <!-- Sled & Legs Animation -->
+                        <g class="anim-press-art">
+                            <rect x="180" y="48" width="12" height="48" rx="2" transform="rotate(-45 180 48)" fill="#EADCC9" stroke="${lineStroke}" stroke-width="1.5"/> <!-- Footplate -->
+                            <path d="M 182 82 L 150 104 M 150 104 L 85 122" stroke="${lineStroke}" stroke-width="2.5"/> <!-- Skeleton Legs -->
+                            <!-- Quad Muscle Overlay (RED) -->
+                            <path d="M 86 122 C 105 102, 125 90, 148 98 C 138 114, 115 126, 88 126 Z" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+                        </g>
+
+                        <!-- Callout Labels & Pointers -->
+                        <line x1="115" y1="102" x2="115" y2="45" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="120" y="45" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">QUADRICEPS</text>
+                        <text x="120" y="53" fill="#666" font-family="sans-serif" font-size="6">VASTUS LATERALIS / MEDIALIS</text>
+
+                        <line x1="72" y1="118" x2="72" y2="155" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="75" y="155" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">GLUTEUS MAXIMUS</text>
+                    </svg>`;
+
+                case 'chest_press':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">CHEST PRESS MACHINE</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: PECTORALIS MAJOR (RED) | SECONDARY: DELTOID (GREEN)</text>
+
+                        <!-- Machine Structure -->
+                        <rect x="70" y="40" width="12" height="120" stroke="${lineStroke}" stroke-width="2" fill="#EADCC9"/>
+                        <rect x="50" y="145" width="50" height="12" stroke="${lineStroke}" stroke-width="2" fill="none"/>
+                        <rect x="74" y="50" width="8" height="80" rx="3" stroke="${lineStroke}" fill="#C86D51"/> <!-- Backrest Pad -->
+
+                        <!-- Female Body -->
+                        <circle cx="88" cy="40" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                        <path d="M 88 50 C 94 70, 96 100, 96 145 L 125 145 L 128 170" stroke="${lineStroke}" stroke-width="2.5" fill="none"/>
+
+                        <!-- Muscles -->
+                        <path d="M 90 60 C 110 62, 116 80, 102 92 C 94 88, 90 75, 90 60 Z" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/> <!-- Pectoralis -->
+                        <circle cx="92" cy="62" r="7" fill="${greenSecondary}" class="m-art-secondary" stroke="${lineStroke}" stroke-width="0.8"/> <!-- Deltoid -->
+
+                        <!-- Lever Press Animation -->
+                        <g class="anim-chest-art">
+                            <line x1="92" y1="64" x2="135" y2="78" stroke="${lineStroke}" stroke-width="2.5"/>
+                            <line x1="135" y1="78" x2="165" y2="78" stroke="${lineStroke}" stroke-width="2.5"/>
+                            <rect x="162" y="50" width="8" height="60" rx="3" stroke="${lineStroke}" stroke-width="1.5" fill="#2C2825"/>
+                        </g>
+
+                        <!-- Pointers -->
+                        <line x1="102" y1="72" x2="160" y2="35" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="165" y="35" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">PECTORALIS MAJOR</text>
+                        <line x1="92" y1="60" x2="160" y2="22" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="165" y="22" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">ANTERIOR DELTOID</text>
+                    </svg>`;
+
+                case 'lat_machine':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">LAT PULLDOWN MACHINE</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: LATISSIMUS DORSI (RED) | SECONDARY: BICEPS (GREEN)</text>
+
+                        <rect x="135" y="20" width="10" height="150" stroke="${lineStroke}" stroke-width="2" fill="#EADCC9"/>
+                        <circle cx="140" cy="28" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                        <rect x="110" y="120" width="50" height="10" rx="4" fill="#EADCC9" stroke="${lineStroke}" stroke-width="1.5"/> <!-- Thigh Pad -->
+
+                        <circle cx="140" cy="55" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                        <path d="M 140 65 L 140 120 L 165 120 L 168 165" stroke="${lineStroke}" stroke-width="2.5" fill="none"/>
+
+                        <!-- Lat Muscle (RED) -->
+                        <path d="M 128 68 C 112 78, 108 102, 122 118 C 132 110, 132 90, 128 68 Z" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+                        <path d="M 152 68 C 168 78, 172 102, 158 118 C 148 110, 148 90, 152 68 Z" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+
+                        <!-- Arms & Bar Pull Animation -->
+                        <g class="anim-lat-art">
+                            <line x1="140" y1="28" x2="140" y2="50" stroke="${lineStroke}" stroke-width="1.5" stroke-dasharray="2 2"/>
+                            <path d="M 70 50 Q 140 60 210 50" stroke="${lineStroke}" stroke-width="4" stroke-linecap="round"/>
+                            <path d="M 85 52 L 115 68 L 130 72 M 195 52 L 165 68 L 150 72" stroke="${lineStroke}" stroke-width="2"/>
+                            <circle cx="120" cy="65" r="4" fill="${greenSecondary}" class="m-art-secondary"/> <!-- Biceps -->
+                        </g>
+
+                        <line x1="114" y1="90" x2="40" y2="90" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="12" y="88" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">LATISSIMUS DORSI</text>
+                    </svg>`;
+
+                case 'leg_curl':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">SEATED LEG CURL</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: HAMSTRINGS (RED) | SECONDARY: GASTROCNEMIUS (GREEN)</text>
+
+                        <rect x="40" y="100" width="100" height="12" rx="4" fill="#EADCC9" stroke="${lineStroke}" stroke-width="1.5"/>
+                        <circle cx="130" cy="106" r="10" stroke="${lineStroke}" stroke-width="2" fill="#2C2825"/> <!-- Pivot -->
+
+                        <circle cx="55" cy="85" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                        <path d="M 65 90 L 128 106" stroke="${lineStroke}" stroke-width="2.5"/>
+
+                        <!-- Hamstrings (RED) -->
+                        <path d="M 75 92 C 92 85, 115 88, 125 102 C 115 110, 92 108, 75 92 Z" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+
+                        <!-- Roller & Leg Animation -->
+                        <g class="anim-curl-art">
+                            <line x1="130" y1="106" x2="195" y2="106" stroke="${lineStroke}" stroke-width="3"/>
+                            <circle cx="190" cy="106" r="10" fill="#EADCC9" stroke="${lineStroke}" stroke-width="1.5"/>
+                            <ellipse cx="170" cy="106" rx="12" ry="5" fill="${greenSecondary}" class="m-art-secondary"/> <!-- Calf -->
+                        </g>
+
+                        <line x1="100" y1="95" x2="100" y2="45" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="105" y="45" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">HAMSTRINGS (BICEPS FEMORIS)</text>
+                    </svg>`;
+
+                case 'shoulder_press':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">SHOULDER PRESS MACHINE</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: ANTERIOR & LATERAL DELTOID (RED)</text>
+
+                        <rect x="130" y="45" width="12" height="110" stroke="${lineStroke}" stroke-width="2" fill="#EADCC9"/>
+                        <circle cx="136" cy="32" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                        <path d="M 136 42 L 136 125" stroke="${lineStroke}" stroke-width="2.5"/>
+
+                        <ellipse cx="112" cy="52" rx="10" ry="8" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+                        <ellipse cx="160" cy="52" rx="10" ry="8" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+
+                        <g class="anim-shoulder-art">
+                            <rect x="80" y="45" width="10" height="28" rx="3" stroke="${lineStroke}" stroke-width="1.5" fill="#2C2825"/>
+                            <rect x="180" y="45" width="10" height="28" rx="3" stroke="${lineStroke}" stroke-width="1.5" fill="#2C2825"/>
+                            <path d="M 112 52 L 90 52 L 85 68 M 160 52 L 182 52 L 187 68" stroke="${lineStroke}" stroke-width="2"/>
+                            <circle cx="98" cy="52" r="4" fill="${greenSecondary}" class="m-art-secondary"/> <!-- Triceps -->
+                        </g>
+
+                        <line x1="112" y1="48" x2="40" y2="30" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="12" y="28" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">DELTOID MUSCLE</text>
+                    </svg>`;
+
+                case 'crunch_machine':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">ABDOMINAL CRUNCH MACHINE</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: RECTUS ABDOMINIS (RED)</text>
+
+                        <rect x="50" y="140" width="160" height="12" rx="4" fill="#EADCC9" stroke="${lineStroke}" stroke-width="1.5"/>
+                        <g class="anim-crunch-art">
+                            <circle cx="100" cy="50" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                            <path d="M 102 60 L 115 110" stroke="${lineStroke}" stroke-width="2.5"/>
+                            <rect x="105" y="68" width="14" height="8" rx="2" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.5"/>
+                            <rect x="107" y="78" width="14" height="8" rx="2" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.5"/>
+                            <rect x="109" y="88" width="14" height="8" rx="2" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.5"/>
+                        </g>
+
+                        <line x1="118" y1="78" x2="190" y2="78" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="195" y="80" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">RECTUS ABDOMINIS</text>
+                    </svg>`;
+
+                case 'hack_squat':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">HACK SQUAT MACHINE</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: QUADRICEPS (RED) | SECONDARY: GLUTEUS (GREEN)</text>
+
+                        <line x1="40" y1="160" x2="210" y2="25" stroke="${lineStroke}" stroke-width="3"/>
+                        <g class="anim-hack-art">
+                            <rect x="140" y="45" width="30" height="55" rx="5" transform="rotate(-38 140 45)" fill="#EADCC9" stroke="${lineStroke}" stroke-width="1.5"/>
+                            <circle cx="172" cy="38" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                            <path d="M 125 105 C 110 115, 95 132, 85 150 M 125 105 L 85 150" stroke="${lineStroke}" stroke-width="2.5"/>
+                            <path d="M 126 102 C 112 112, 98 128, 88 145 C 102 138, 118 122, 130 110 Z" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+                            <circle cx="132" cy="100" r="7" fill="${greenSecondary}" class="m-art-secondary"/>
+                        </g>
+
+                        <line x1="110" y1="125" x2="40" y2="80" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="12" y="78" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">QUADRICEPS FEMORIS</text>
+                    </svg>`;
+
+                case 'pulley_basso':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">SEATED CABLE ROW (PULLEY)</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: RHOMBOIDS & LATISSIMUS (RED)</text>
+
+                        <circle cx="210" cy="130" r="10" stroke="${lineStroke}" stroke-width="2" fill="#EADCC9"/>
+                        <rect x="40" y="130" width="100" height="12" rx="4" fill="#EADCC9" stroke="${lineStroke}" stroke-width="1.5"/>
+                        <circle cx="65" cy="75" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                        <path d="M 68 85 L 78 130 M 78 130 L 140 125" stroke="${lineStroke}" stroke-width="2.5"/>
+
+                        <path d="M 68 88 C 80 88, 92 102, 80 118 C 74 112, 68 100, 68 88 Z" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+
+                        <g class="anim-pulley-art">
+                            <line x1="210" y1="130" x2="140" y2="105" stroke="${lineStroke}" stroke-width="1.5" stroke-dasharray="2 2"/>
+                            <polygon points="140,100 140,110 130,105" fill="#2C2825"/>
+                            <path d="M 72 90 L 98 102 L 132 105" stroke="${lineStroke}" stroke-width="2"/>
+                            <circle cx="108" cy="102" r="4" fill="${greenSecondary}" class="m-art-secondary"/>
+                        </g>
+
+                        <line x1="80" y1="98" x2="20" y2="60" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="12" y="58" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">RHOMBOIDS & DORSI</text>
+                    </svg>`;
+
+                case 'abductor_glute':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">ABDUCTOR MACHINE</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: GLUTEUS MEDIUS & MAXIMUS (RED)</text>
+
+                        <rect x="80" y="50" width="120" height="90" rx="10" fill="#EADCC9" stroke="${lineStroke}" stroke-width="2"/>
+                        <ellipse cx="85" cy="85" rx="14" ry="12" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+                        <ellipse cx="195" cy="85" rx="14" ry="12" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+
+                        <g class="anim-abd-l-art">
+                            <rect x="50" y="90" width="12" height="30" rx="4" fill="#2C2825"/>
+                            <line x1="88" y1="82" x2="60" y2="102" stroke="${lineStroke}" stroke-width="3"/>
+                        </g>
+                        <g class="anim-abd-r-art">
+                            <rect x="218" y="90" width="12" height="30" rx="4" fill="#2C2825"/>
+                            <line x1="192" y1="82" x2="220" y2="102" stroke="${lineStroke}" stroke-width="3"/>
+                        </g>
+
+                        <line x1="85" y1="85" x2="20" y2="45" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="12" y="43" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">GLUTEUS MEDIUS</text>
+                    </svg>`;
+
+                case 'pectoral_machine':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">PECTORAL FLY MACHINE</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: PECTORALIS MAJOR (RED)</text>
+
+                        <rect x="134" y="30" width="12" height="120" rx="5" fill="#EADCC9" stroke="${lineStroke}" stroke-width="2"/>
+                        <circle cx="140" cy="40" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                        <ellipse cx="140" cy="75" rx="18" ry="14" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+
+                        <g class="anim-pec-l-art">
+                            <rect x="70" y="50" width="12" height="35" rx="4" fill="#2C2825"/>
+                            <path d="M 125 72 L 95 75 L 80 55" stroke="${lineStroke}" stroke-width="2.5"/>
+                        </g>
+                        <g class="anim-pec-r-art">
+                            <rect x="198" y="50" width="12" height="35" rx="4" fill="#2C2825"/>
+                            <path d="M 155 72 L 185 75 L 200 55" stroke="${lineStroke}" stroke-width="2.5"/>
+                        </g>
+
+                        <line x1="140" y1="75" x2="220" y2="30" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="225" y="30" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">PECTORALIS</text>
+                    </svg>`;
+
+                case 'triceps_pushdown':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">TRICEPS CABLE PUSHDOWN</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: TRICEPS BRACHII (RED)</text>
+
+                        <circle cx="150" cy="25" r="8" stroke="${lineStroke}" stroke-width="2" fill="#EADCC9"/>
+                        <line x1="150" y1="25" x2="150" y2="65" stroke="${lineStroke}" stroke-width="1.5" stroke-dasharray="2 2"/>
+                        <circle cx="105" cy="50" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                        <path d="M 108 60 L 118 110 M 118 110 L 108 160" stroke="${lineStroke}" stroke-width="2.5"/>
+
+                        <path d="M 114 68 C 108 78, 112 90, 120 92 C 124 84, 120 74, 114 68 Z" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+
+                        <g class="anim-tricep-art">
+                            <line x1="120" y1="92" x2="150" y2="95" stroke="${lineStroke}" stroke-width="2.5"/>
+                            <line x1="150" y1="85" x2="150" y2="110" stroke="#2C2825" stroke-width="4" stroke-linecap="round"/>
+                        </g>
+
+                        <line x1="118" y1="80" x2="40" y2="60" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="12" y="58" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">TRICEPS BRACHII</text>
+                    </svg>`;
+
+                case 'plank':
+                    return `
+                    <svg class="w-full h-full max-w-[260px] max-h-[190px]" viewBox="0 0 280 180" fill="none">
+                        <rect width="280" height="180" rx="10" fill="${bgBg}"/>
+                        <text x="12" y="18" fill="#2C2825" font-family="monospace" font-size="10" font-weight="bold">FOREARM ISOMETRIC PLANK</text>
+                        <text x="12" y="30" fill="#2C2825" font-family="sans-serif" font-size="7">PRIMARY: TRANSVERSE & RECTUS ABDOMINIS (RED)</text>
+
+                        <rect x="20" y="145" width="240" height="8" rx="4" fill="#EADCC9" stroke="${lineStroke}" stroke-width="1.5"/>
+                        <line x1="50" y1="143" x2="80" y2="143" stroke="#2C2825" stroke-width="5" stroke-linecap="round"/>
+                        <circle cx="50" cy="110" r="10" stroke="${lineStroke}" stroke-width="1.5" fill="none"/>
+                        <path d="M 60 115 L 210 135" stroke="${lineStroke}" stroke-width="2.5"/>
+
+                        <rect x="90" y="112" width="55" height="14" rx="4" fill="${redPrimary}" class="m-art-primary" stroke="${lineStroke}" stroke-width="0.8"/>
+
+                        <line x1="120" y1="120" x2="120" y2="60" stroke="${lineStroke}" stroke-width="0.8" stroke-dasharray="2 2"/>
+                        <text x="125" y="60" fill="#2C2825" font-family="sans-serif" font-size="7" font-weight="bold">CORE / ABDOMINALS</text>
+                    </svg>`;
+
+                default:
+                    return '';
+            }
+        }
+
+        let currentRoutine = 'A';
+        let activeWeekPattern = 'ABA';
+        let timerInterval = null;
+        let timerTimeLeft = 0;
+        let chartInstance = null;
+        let audioCtx = null;
+
+        let setCompletionState = {};
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadWeekPatternPreference();
+            renderWorkoutList();
+            populateChartSelector();
+            updateHistoryLogsDisplay();
+            initAudioContext();
+        });
+
+        function loadWeekPatternPreference() {
+            const saved = localStorage.getItem('fittrack_week_pattern');
+            if(saved) activeWeekPattern = saved;
+            updateWeekPatternUI();
+        }
+
+        function toggleWeekPattern() {
+            activeWeekPattern = (activeWeekPattern === 'ABA') ? 'BAB' : 'ABA';
+            localStorage.setItem('fittrack_week_pattern', activeWeekPattern);
+            updateWeekPatternUI();
+        }
+
+        function updateWeekPatternUI() {
+            const label = document.getElementById('currentWeekPattern');
+            const mon = document.getElementById('dashDayMon');
+            const wed = document.getElementById('dashDayWed');
+            const fri = document.getElementById('dashDayFri');
+
+            if(activeWeekPattern === 'ABA') {
+                label.innerText = "Settimana Attuale: A - B - A";
+                mon.innerText = "Scheda A";
+                wed.innerText = "Scheda B";
+                fri.innerText = "Scheda A";
+            } else {
+                label.innerText = "Settimana Attuale: B - A - B";
+                mon.innerText = "Scheda B";
+                wed.innerText = "Scheda A";
+                fri.innerText = "Scheda B";
+            }
+        }
+
+        function switchTab(tabId) {
+            const views = ['dashboard', 'workout', 'stats', 'tips'];
+            views.forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                const navBtn = document.getElementById(`nav-${v}`);
+                if(v === tabId) {
+                    el.classList.remove('hidden');
+                    navBtn.classList.add('text-warm-500');
+                    navBtn.classList.remove('text-stone-400');
+                } else {
+                    el.classList.add('hidden');
+                    navBtn.classList.remove('text-warm-500');
+                    navBtn.classList.add('text-stone-400');
+                }
+            });
+
+            const progressHeader = document.getElementById('sessionProgressContainer');
+            if(tabId === 'workout') {
+                progressHeader.classList.remove('hidden');
+            } else {
+                progressHeader.classList.add('hidden');
+            }
+
+            if(tabId === 'stats') {
+                renderChart();
+            }
+        }
+
+        function openWorkoutRoutine(routineKey) {
+            setActiveRoutine(routineKey);
+            switchTab('workout');
+        }
+
+        function selectWorkoutFromDash(defaultType) {
+            openWorkoutRoutine(defaultType);
+        }
+
+        function scrollToWarmup() {
+            switchTab('workout');
+            const el = document.getElementById('warmupSection');
+            if(el) el.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function setActiveRoutine(routineKey) {
+            currentRoutine = routineKey;
+            const btnA = document.getElementById('btnTabSchedaA');
+            const btnB = document.getElementById('btnTabSchedaB');
+
+            if(routineKey === 'A') {
+                btnA.className = "flex-1 py-2 text-xs font-bold rounded-xl transition text-white bg-warm-500 shadow-sm";
+                btnB.className = "flex-1 py-2 text-xs font-bold rounded-xl transition text-stone-600 hover:text-stone-900";
+            } else {
+                btnB.className = "flex-1 py-2 text-xs font-bold rounded-xl transition text-white bg-warm-accent shadow-sm";
+                btnA.className = "flex-1 py-2 text-xs font-bold rounded-xl transition text-stone-600 hover:text-stone-900";
+            }
+
+            setCompletionState = {};
+            renderWorkoutList();
+            updateSessionProgressBar();
+        }
+
+        function renderWorkoutList() {
+            const container = document.getElementById('exerciseListContainer');
+            const exercises = EXERCISES_DATA[currentRoutine];
+
+            let html = '';
+
+            exercises.forEach((ex, idx) => {
+                const lastLog = getLastLogForExercise(ex.id);
+                const defaultWeight = lastLog ? lastLog.weight : '';
+                const defaultReps = lastLog ? lastLog.reps : (ex.reps.includes('-') ? ex.reps.split('-')[0] : ex.reps);
+
+                html += `
+                <div class="p-4 rounded-2xl bg-white border border-stone-200/80 space-y-3 shadow-xs relative">
+                    <div class="flex items-start justify-between">
+                        <div class="space-y-0.5">
+                            <span class="text-[10px] font-bold text-stone-400 tracking-wider uppercase">Esercizio ${idx + 1} • ${ex.machine}</span>
+                            <h4 class="text-base font-bold text-stone-900">${ex.name}</h4>
+                            <div class="text-[11px] text-warm-600 font-semibold flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-warm-500"></span>
+                                Target: <span class="text-stone-700">${ex.target}</span>
+                            </div>
+                        </div>
+                        <button onclick="startTimer(${ex.rest})" class="px-2.5 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-stone-100 text-xs font-bold text-stone-700 border border-stone-200 flex items-center gap-1.5 shrink-0 shadow-xs">
+                            <i class="fa-solid fa-stopwatch text-warm-500"></i>
+                            <span>${ex.rest}s</span>
+                        </button>
+                    </div>
+
+                    <!-- VINTAGE TECHNICAL LINE-ART PREVIEW -->
+                    <div class="bg-[#FAF5EB] p-2.5 rounded-2xl border border-[#DCD0B9] space-y-2 shadow-inner">
+                        <div onclick="openMuscleModal('${ex.id}')" class="w-full h-44 flex items-center justify-center bg-[#FAF5EB] rounded-xl border border-[#DCD0B9] p-1 relative cursor-pointer group shadow-xs overflow-hidden">
+                            ${getVintageLineArtSvg(ex.svgType)}
+                            <div class="absolute bottom-1 right-1 bg-white/90 rounded-md px-2 py-0.5 text-[9px] font-bold text-stone-700 flex items-center gap-1 border border-stone-200 shadow-xs">
+                                <i class="fa-solid fa-expand text-[8px] text-warm-500"></i> Tavola Anatomica
+                            </div>
+                        </div>
+
+                        <div class="text-[11px] text-stone-600 border-t border-[#DCD0B9]/80 pt-2 leading-relaxed">
+                            <span class="text-stone-900 font-bold">Assetto:</span> ${ex.instructions}
+                        </div>
+                    </div>
+
+                    <!-- Inputs -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <div>
+                            <label class="block text-[10px] font-bold text-stone-400 mb-1 uppercase tracking-wider">Carico Usato (kg)</label>
+                            <input type="number" id="weight_${ex.id}" value="${defaultWeight}" placeholder="es. 25" class="w-full bg-[#FAF7F2] border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold text-stone-800 focus:outline-none focus:border-warm-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-stone-400 mb-1 uppercase tracking-wider">Ripetizioni Target</label>
+                            <input type="text" id="reps_${ex.id}" value="${defaultReps}" placeholder="es. 10" class="w-full bg-[#FAF7F2] border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold text-stone-800 focus:outline-none focus:border-warm-500">
+                        </div>
+                    </div>
+
+                    <!-- Checkboxes for Sets -->
+                    <div class="pt-2 border-t border-stone-100">
+                        <div class="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                            <span>Spunta le Serie Completate:</span>
+                            <span class="text-warm-600 font-semibold">3 Serie Previste</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            ${[1, 2, 3].map(setNum => {
+                                const key = `${ex.id}_${setNum}`;
+                                const isChecked = !!setCompletionState[key];
+                                return `
+                                <button id="btnSet_${key}" onclick="toggleSetFlag('${ex.id}', ${setNum}, ${ex.rest})" class="py-2 px-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 ${isChecked ? 'bg-warm-500/10 border-warm-500 text-warm-600' : 'bg-[#FAF7F2] border-stone-200 text-stone-500 hover:border-stone-300'}">
+                                    <i class="fa-solid ${isChecked ? 'fa-square-check text-warm-500' : 'fa-square text-stone-300'}"></i>
+                                    <span>Serie ${setNum}</span>
+                                </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <div class="pt-1">
+                        <button onclick="saveExerciseLog('${ex.id}', '${ex.name}')" class="w-full py-2 bg-[#FAF7F2] hover:bg-stone-100 text-warm-600 font-bold text-xs rounded-xl border border-stone-200 transition flex items-center justify-center gap-2 shadow-xs">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Registra Peso & Ripetizioni</span>
+                        </button>
+                    </div>
+                </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function openMuscleModal(exId) {
+            const allEx = [...EXERCISES_DATA.A, ...EXERCISES_DATA.B];
+            const ex = allEx.find(e => e.id === exId);
+            if(!ex) return;
+
+            document.getElementById('modalExerciseTitle').innerText = ex.name;
+            document.getElementById('modalExerciseMachine').innerText = ex.machine;
+            document.getElementById('modalPrimaryMuscle').innerText = ex.primaryMuscle;
+            document.getElementById('modalPrimaryDesc').innerText = ex.primaryDesc;
+            document.getElementById('modalSecondaryMuscle').innerText = ex.secondaryMuscles;
+            document.getElementById('modalSecondaryDesc').innerText = ex.secondaryDesc;
+            document.getElementById('modalExecutionTips').innerText = ex.instructions;
+
+            document.getElementById('modalSvgContainer').innerHTML = getVintageLineArtSvg(ex.svgType);
+
+            document.getElementById('muscleModal').classList.remove('hidden');
+        }
+
+        function closeMuscleModal() {
+            document.getElementById('muscleModal').classList.add('hidden');
+        }
+
+        function toggleSetFlag(exId, setNum, restSeconds) {
+            const key = `${exId}_${setNum}`;
+            setCompletionState[key] = !setCompletionState[key];
+
+            const btn = document.getElementById(`btnSet_${key}`);
+            if(btn) {
+                if(setCompletionState[key]) {
+                    btn.className = "py-2 px-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 bg-warm-500/10 border-warm-500 text-warm-600";
+                    btn.querySelector('i').className = "fa-solid fa-square-check text-warm-500";
+                    startTimer(restSeconds);
+                    showToast(`Serie ${setNum} completata! Recupero avviato.`);
+                } else {
+                    btn.className = "py-2 px-2 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 bg-[#FAF7F2] border-stone-200 text-stone-500 hover:border-stone-300";
+                    btn.querySelector('i').className = "fa-solid fa-square text-stone-300";
+                }
+            }
+
+            updateSessionProgressBar();
+        }
+
+        function updateSessionProgressBar() {
+            const exercises = EXERCISES_DATA[currentRoutine];
+            const totalSets = exercises.length * 3;
+            
+            let completedSets = 0;
+            exercises.forEach(ex => {
+                [1, 2, 3].forEach(s => {
+                    if(setCompletionState[`${ex.id}_${s}`]) completedSets++;
+                });
+            });
+
+            const percent = Math.round((completedSets / totalSets) * 100);
+            
+            document.getElementById('sessionProgressLabel').innerText = `Completamento Sessione: ${completedSets}/${totalSets} Serie`;
+            document.getElementById('sessionProgressPercent').innerText = `${percent}%`;
+            document.getElementById('sessionProgressBar').style.width = `${percent}%`;
+        }
+
+        function initAudioContext() {
+            try {
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            } catch(e) {}
+        }
+
+        function playBeep() {
+            if(!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 880;
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.25);
+            } catch(e) {}
+        }
+
+        function startTimer(seconds) {
+            if(audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            clearInterval(timerInterval);
+            timerTimeLeft = seconds;
+            updateTimerDisplay();
+
+            const bar = document.getElementById('timerBar');
+            bar.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
+
+            timerInterval = setInterval(() => {
+                timerTimeLeft--;
+                updateTimerDisplay();
+
+                if(timerTimeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    playBeep();
+                    setTimeout(() => playBeep(), 300);
+                }
+            }, 1000);
+        }
+
+        function addTimerSeconds(extra) {
+            timerTimeLeft += extra;
+            updateTimerDisplay();
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('timerBar').classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
+        }
+
+        function updateTimerDisplay() {
+            const display = document.getElementById('timerDisplay');
+            const mins = Math.floor(timerTimeLeft / 60);
+            const secs = timerTimeLeft % 60;
+            display.innerText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function getSavedLogs() {
+            const data = localStorage.getItem('fittrack_exercise_logs');
+            return data ? JSON.parse(data) : {};
+        }
+
+        function getLastLogForExercise(exId) {
+            const logs = getSavedLogs();
+            if(logs[exId] && logs[exId].length > 0) {
+                return logs[exId][logs[exId].length - 1];
+            }
+            return null;
+        }
+
+        function saveExerciseLog(exId, exName) {
+            const weightVal = document.getElementById(`weight_${exId}`).value;
+            const repsVal = document.getElementById(`reps_${exId}`).value;
+
+            if(!weightVal || !repsVal) {
+                showToast("Inserisci sia il peso che le ripetizioni.");
+                return;
+            }
+
+            const logs = getSavedLogs();
+            if(!logs[exId]) logs[exId] = [];
+
+            const dateStr = new Date().toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+            logs[exId].push({
+                date: dateStr,
+                weight: parseFloat(weightVal),
+                reps: repsVal,
+                routine: currentRoutine
+            });
+
+            localStorage.setItem('fittrack_exercise_logs', JSON.stringify(logs));
+            showToast(`Registrato: ${exName} (${weightVal} kg)`);
+            updateHistoryLogsDisplay();
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-16 left-1/2 transform -translate-x-1/2 bg-warm-500 text-white font-bold text-xs px-4 py-2 rounded-full shadow-lg z-50 transition-all';
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2200);
+        }
+
+        function updateHistoryLogsDisplay() {
+            const container = document.getElementById('workoutHistoryLogs');
+            const logs = getSavedLogs();
+
+            let allEntries = [];
+            Object.keys(logs).forEach(exId => {
+                logs[exId].forEach(entry => {
+                    allEntries.push({ ...entry, exId });
+                });
+            });
+
+            if(allEntries.length === 0) {
+                container.innerHTML = '<div class="text-stone-400 text-center py-3 text-[11px]">Nessun dato ancora salvato.</div>';
+                return;
+            }
+
+            allEntries.reverse();
+
+            let html = '';
+            allEntries.slice(0, 8).forEach(item => {
+                const exObj = [...EXERCISES_DATA.A, ...EXERCISES_DATA.B].find(e => e.id === item.exId);
+                const name = exObj ? exObj.name : item.exId;
+                html += `
+                <div class="p-2.5 rounded-xl bg-[#FAF7F2] border border-stone-200 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-stone-900 text-xs">${name}</div>
+                        <div class="text-[10px] text-stone-500">${item.date} • Scheda ${item.routine}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-bold text-warm-600">${item.weight} kg</div>
+                        <div class="text-[10px] text-stone-500">${item.reps} rip</div>
+                    </div>
+                </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function clearAllData() {
+            if(confirm("Sei sicura di voler cancellare la cronologia pesi salvata?")) {
+                localStorage.removeItem('fittrack_exercise_logs');
+                updateHistoryLogsDisplay();
+                renderWorkoutList();
+                if(chartInstance) chartInstance.destroy();
+                showToast("Dati cancellati.");
+            }
+        }
+
+        function exportToCSV() {
+            const logs = getSavedLogs();
+            let csvRows = ['Data,Scheda,Esercizio,Peso_kg,Ripetizioni'];
+
+            const allEx = [...EXERCISES_DATA.A, ...EXERCISES_DATA.B];
+
+            Object.keys(logs).forEach(exId => {
+                const exObj = allEx.find(e => e.id === exId);
+                const name = exObj ? exObj.name : exId;
+                logs[exId].forEach(entry => {
+                    csvRows.push(`"${entry.date}","Scheda ${entry.routine}","${name}",${entry.weight},"${entry.reps}"`);
+                });
+            });
+
+            if(csvRows.length === 1) {
+                showToast("Nessun dato da esportare.");
+                return;
+            }
+
+            const csvString = csvRows.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `FitTrack_Allenamenti_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast("File CSV scaricato!");
+        }
+
+        function exportToPDF() {
+            const logs = getSavedLogs();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            doc.setTextColor(200, 109, 81);
+            doc.text("FitTrack Studio - Report Allenamenti", 14, 20);
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(120);
+            doc.text(`Atleta: Donna 26y | Data Report: ${new Date().toLocaleDateString('it-IT')}`, 14, 27);
+
+            const tableRows = [];
+            const allEx = [...EXERCISES_DATA.A, ...EXERCISES_DATA.B];
+
+            Object.keys(logs).forEach(exId => {
+                const exObj = allEx.find(e => e.id === exId);
+                const name = exObj ? exObj.name : exId;
+                logs[exId].forEach(entry => {
+                    tableRows.push([entry.date, `Scheda ${entry.routine}`, name, `${entry.weight} kg`, `${entry.reps} rip`]);
+                });
+            });
+
+            if(tableRows.length === 0) {
+                showToast("Nessun dato registrato per il PDF.");
+                return;
+            }
+
+            doc.autoTable({
+                head: [['Data', 'Scheda', 'Esercizio', 'Carico', 'Target Ripetizioni']],
+                body: tableRows,
+                startY: 34,
+                theme: 'grid',
+                headStyles: { fillStyle: 'f0f0f0', fillColor: [200, 109, 81], textColor: [255, 255, 255], fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 3 }
+            });
+
+            doc.save(`FitTrack_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+            showToast("Report PDF Scaricato!");
+        }
+
+        function populateChartSelector() {
+            const select = document.getElementById('chartExerciseSelect');
+            select.innerHTML = '';
+
+            const allEx = [...EXERCISES_DATA.A, ...EXERCISES_DATA.B];
+            allEx.forEach(ex => {
+                const opt = document.createElement('option');
+                opt.value = ex.id;
+                opt.innerText = `${ex.name} (${ex.machine})`;
+                select.appendChild(opt);
+            });
+        }
+
+        function updateChart() {
+            renderChart();
+        }
+
+        function renderChart() {
+            const select = document.getElementById('chartExerciseSelect');
+            const selectedExId = select.value || EXERCISES_DATA.A[0].id;
+
+            const logs = getSavedLogs();
+            const exLogs = logs[selectedExId] || [];
+
+            const labels = exLogs.map(l => l.date);
+            const dataPoints = exLogs.map(l => l.weight);
+
+            const ctx = document.getElementById('progressChart').getContext('2d');
+
+            if(chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length > 0 ? labels : ['Inizio'],
+                    datasets: [{
+                        label: 'Carico (kg)',
+                        data: dataPoints.length > 0 ? dataPoints : [0],
+                        borderColor: '#C86D51',
+                        backgroundColor: 'rgba(200, 109, 81, 0.15)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#C86D51',
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#E8DCCB' },
+                            ticks: { color: '#78716C', font: { size: 10 } }
+                        },
+                        y: {
+                            grid: { color: '#E8DCCB' },
+                            ticks: { color: '#78716C', font: { size: 10 } },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
